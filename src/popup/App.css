@@ -254,6 +254,38 @@
   }
 }
 
+.auth-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted, #666);
+}
+
+.auth-secondary {
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #ccc);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent, #4f46e5);
+    outline-offset: 2px;
+  }
+}
+
+.mfa-form input {
+  letter-spacing: 4px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .auth-dashboard {
   display: flex;
   flex-direction: column;

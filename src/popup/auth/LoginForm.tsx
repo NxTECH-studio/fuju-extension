@@ -15,8 +15,6 @@ function formatError(error: AuthErrorPayload | null): string | null {
       return 'アカウントが一時的にロックされています。時間をおいて再度お試しください。';
     case AuthErrorCode.RATE_LIMIT_EXCEEDED:
       return 'リクエストが多すぎます。しばらく経ってから再試行してください。';
-    case AuthErrorCode.MFA_NOT_SUPPORTED:
-      return 'このアカウントは多要素認証（MFA）が有効です。現バージョンでは未対応です。';
     case AuthErrorCode.MISSING_REQUIRED_FIELD:
     case AuthErrorCode.INVALID_REQUEST:
       return '入力内容を確認してください。';
