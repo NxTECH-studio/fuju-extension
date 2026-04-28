@@ -4,6 +4,7 @@ import {
   login as loginRequest,
   logout as logoutRequest,
   refresh as refreshRequest,
+  verifyMfa as verifyMfaRequest,
 } from '../shared/auth/client';
 import { AuthCoreApiError, AuthErrorCode } from '../shared/auth/errors';
 import {
@@ -18,6 +19,8 @@ import { isPreTokenResponse } from '../shared/auth/types';
 import type {
   AuthState,
   LoginRequest,
+  MfaChallenge,
+  MfaVerifyRequest,
   TokenResponse,
   User,
 } from '../shared/auth/types';
@@ -29,6 +32,43 @@ import {
 
 const REFRESH_ALARM_NAME = 'auth.refresh';
 const REFRESH_LEAD_SECONDS = 60;
+
+interface PendingMfaState {
+  preToken: string;
+  expiresAt: number; // Unix seconds
+  timeoutId: ReturnType<typeof setTimeout> | null;
+}
+
+// pre_token は memory only。chrome.storage には保存しない。
+// service worker の suspend/restart で消えた場合は MFA_NOT_PENDING で popup を LoginForm に戻す。
+let pendingMfa: PendingMfaState | null = null;
+
+function clearPendingMfa(): void {
+  if (pendingMfa?.timeoutId) {
+    clearTimeout(pendingMfa.timeoutId);
+  }
+  pendingMfa = null;
+}
+
+function setPendingMfa(preToken: string): MfaChallenge {
+  clearPendingMfa();
+  const payload = decodeJwt(preToken);
+  const expiresAt = payload.exp;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const ttlMs = (expiresAt - nowSeconds) * 1000;
+  if (ttlMs <= 0) {
+    throw new AuthCoreApiError(
+      401,
+      AuthErrorCode.PRE_TOKEN_EXPIRED,
+      'Pre-token has already expired',
+    );
+  }
+  const timeoutId = setTimeout(() => {
+    pendingMfa = null;
+  }, ttlMs);
+  pendingMfa = { preToken, expiresAt, timeoutId };
+  return { expiresAt };
+}
 
 function buildCookieUrl(): string {
   return `${AUTHCORE_BASE_URL}${REFRESH_COOKIE_PATH}`;
@@ -131,19 +171,65 @@ export async function init(): Promise<void> {
   }
 }
 
-export async function handleLogin(request: LoginRequest): Promise<{ user: User }> {
+export async function handleLogin(
+  request: LoginRequest,
+): Promise<
+  | { kind: 'success'; user: User }
+  | { kind: 'mfa_required'; challenge: MfaChallenge }
+> {
   const response = await loginRequest(request);
   if (isPreTokenResponse(response)) {
-    throw new AuthCoreApiError(
-      403,
-      AuthErrorCode.MFA_NOT_SUPPORTED,
-      'MFA login is not supported in this version',
-    );
+    const challenge = setPendingMfa(response.pre_token);
+    return { kind: 'mfa_required', challenge };
   }
   await persistTokenResponse(response);
   const user = await getProfile(response.access_token);
   await setUser(user);
+  return { kind: 'success', user };
+}
+
+export async function handleMfaVerify(
+  request: MfaVerifyRequest,
+): Promise<{ user: User }> {
+  if (!pendingMfa) {
+    throw new AuthCoreApiError(
+      400,
+      AuthErrorCode.MFA_NOT_PENDING,
+      'No pending MFA challenge. Please log in again.',
+    );
+  }
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (pendingMfa.expiresAt <= nowSeconds) {
+    clearPendingMfa();
+    throw new AuthCoreApiError(
+      401,
+      AuthErrorCode.PRE_TOKEN_EXPIRED,
+      'Pre-token has expired. Please log in again.',
+    );
+  }
+  let response: TokenResponse;
+  try {
+    response = await verifyMfaRequest(pendingMfa.preToken, request);
+  } catch (error) {
+    if (error instanceof AuthCoreApiError) {
+      if (
+        error.code === AuthErrorCode.PRE_TOKEN_EXPIRED ||
+        error.code === AuthErrorCode.PRE_TOKEN_INVALID
+      ) {
+        clearPendingMfa();
+      }
+    }
+    throw error;
+  }
+  await persistTokenResponse(response);
+  const user = await getProfile(response.access_token);
+  await setUser(user);
+  clearPendingMfa();
   return { user };
+}
+
+export async function handleMfaCancel(): Promise<void> {
+  clearPendingMfa();
 }
 
 let refreshInflight: Promise<TokenResponse> | null = null;

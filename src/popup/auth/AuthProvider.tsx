@@ -7,9 +7,15 @@ import type {
   AuthResponse,
   GetStateResponseData,
   LoginResponseData,
+  MfaVerifyResponseData,
 } from '../../shared/auth/messages';
 import { STORAGE_KEYS } from '../../shared/auth/storage';
-import type { LoginRequest, User } from '../../shared/auth/types';
+import type {
+  LoginRequest,
+  MfaChallenge,
+  MfaVerifyRequest,
+  User,
+} from '../../shared/auth/types';
 import { AuthContext } from './auth-context';
 import type { AuthContextValue } from './auth-context';
 
@@ -42,6 +48,14 @@ function sendMessage<T>(message: unknown): Promise<AuthResponse<T>> {
   });
 }
 
+function isMfaChallengeReset(code: string): boolean {
+  return (
+    code === AuthErrorCode.PRE_TOKEN_EXPIRED ||
+    code === AuthErrorCode.PRE_TOKEN_INVALID ||
+    code === AuthErrorCode.MFA_NOT_PENDING
+  );
+}
+
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -51,6 +65,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AuthErrorPayload | null>(null);
+  const [mfaChallenge, setMfaChallenge] = useState<MfaChallenge | null>(null);
 
   const refreshState = useCallback(async () => {
     const response = await sendMessage<GetStateResponseData>({
@@ -105,12 +120,51 @@ export function AuthProvider({ children }: AuthProviderProps) {
         payload: request,
       });
       if (response.ok) {
-        setUser(response.data.user);
-        setIsAuthenticated(true);
+        if (response.data.kind === 'mfa_required') {
+          setMfaChallenge(response.data.challenge);
+        } else {
+          setMfaChallenge(null);
+          setUser(response.data.user);
+          setIsAuthenticated(true);
+        }
       } else {
         setError(response.error);
       }
     } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const verifyMfa = useCallback(async (request: MfaVerifyRequest) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await sendMessage<MfaVerifyResponseData>({
+        type: AuthMessageType.MFA_VERIFY,
+        payload: request,
+      });
+      if (response.ok) {
+        setMfaChallenge(null);
+        setUser(response.data.user);
+        setIsAuthenticated(true);
+      } else {
+        setError(response.error);
+        if (isMfaChallengeReset(response.error.code)) {
+          setMfaChallenge(null);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const cancelMfa = useCallback(async () => {
+    setLoading(true);
+    try {
+      await sendMessage<undefined>({ type: AuthMessageType.MFA_CANCEL });
+    } finally {
+      setMfaChallenge(null);
+      setError(null);
       setLoading(false);
     }
   }, []);
@@ -125,6 +179,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       setUser(null);
       setIsAuthenticated(false);
+      setMfaChallenge(null);
     } finally {
       setLoading(false);
     }
@@ -140,11 +195,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isAuthenticated,
       loading,
       error,
+      mfaChallenge,
       login,
+      verifyMfa,
+      cancelMfa,
       logout,
       clearError,
     }),
-    [user, isAuthenticated, loading, error, login, logout, clearError],
+    [
+      user,
+      isAuthenticated,
+      loading,
+      error,
+      mfaChallenge,
+      login,
+      verifyMfa,
+      cancelMfa,
+      logout,
+      clearError,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

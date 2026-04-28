@@ -1,12 +1,19 @@
 import { AUTHCORE_BASE_URL } from '../config';
 import { AuthCoreApiError, AuthErrorCode, isAuthCoreError } from './errors';
-import type { LoginRequest, LoginResponse, TokenResponse, User } from './types';
+import type {
+  LoginRequest,
+  LoginResponse,
+  MfaVerifyRequest,
+  TokenResponse,
+  User,
+} from './types';
 
 interface RequestOptions {
   method?: string;
   headers?: Record<string, string>;
   body?: unknown;
   cookieHeader?: string;
+  bearerToken?: string;
 }
 
 async function parseBody(response: Response): Promise<unknown> {
@@ -34,6 +41,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     // chrome.runtime fetch does not auto-attach refresh_token cookie because the request
     // origin is `chrome-extension://<id>`. The background worker injects it manually.
     headers['Cookie'] = options.cookieHeader;
+  }
+  if (options.bearerToken) {
+    headers['Authorization'] = `Bearer ${options.bearerToken}`;
   }
 
   let response: Response;
@@ -93,7 +103,20 @@ export async function logout(options: RefreshOptions = {}): Promise<void> {
 export async function getProfile(accessToken: string): Promise<User> {
   return request<User>('/v1/user/profile', {
     method: 'GET',
-    headers: { Authorization: `Bearer ${accessToken}` },
+    bearerToken: accessToken,
+  });
+}
+
+export async function verifyMfa(
+  preToken: string,
+  body: MfaVerifyRequest,
+): Promise<TokenResponse> {
+  // AuthCore 仕様: /v1/auth/mfa/verify は pre_token を `Authorization: Bearer` で受け取る
+  // (openapi.yaml: securityScheme `preToken`)。
+  return request<TokenResponse>('/v1/auth/mfa/verify', {
+    method: 'POST',
+    bearerToken: preToken,
+    body,
   });
 }
 
