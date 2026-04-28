@@ -83,11 +83,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (areaName !== 'local') {
         return;
       }
-      const watched = [
-        STORAGE_KEYS.accessToken,
-        STORAGE_KEYS.user,
-        STORAGE_KEYS.accessTokenExp,
-      ];
+      // accessTokenExp はトークンリフレッシュのたびに更新されるが、それだけでは
+      // ログイン/ログアウト状態は変わらないので listen 対象外とする。
+      const watched = [STORAGE_KEYS.accessToken, STORAGE_KEYS.user];
       if (watched.some((key) => key in changes)) {
         void refreshState();
       }

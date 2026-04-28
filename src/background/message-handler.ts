@@ -68,8 +68,21 @@ async function dispatch(message: AuthMessage): Promise<AuthResponse<unknown>> {
   }
 }
 
+function isTrustedSender(sender: chrome.runtime.MessageSender): boolean {
+  // Only accept messages originating from this extension's own contexts (popup / options /
+  // background). Reject content scripts (sender.tab is set) so web pages cannot drive
+  // login/logout/fetch through the message API.
+  if (sender.id !== chrome.runtime.id) {
+    return false;
+  }
+  return sender.tab === undefined;
+}
+
 export function register(): void {
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (!isTrustedSender(sender)) {
+      return false;
+    }
     if (!isAuthMessage(message)) {
       return false;
     }

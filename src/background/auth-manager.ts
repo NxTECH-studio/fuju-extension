@@ -71,6 +71,13 @@ async function persistTokenResponse(token: TokenResponse): Promise<number> {
   const refreshCookie = await readRefreshCookie();
   if (refreshCookie) {
     await setRefreshToken(refreshCookie);
+  } else {
+    // host_permissions / cookies permission が抜けているか、AuthCore 側で Set-Cookie が
+    // 返っていない可能性が高い。Cookie が読めない場合は次回ブラウザ再起動後の自動復元が
+    // 不可能になるため、警告だけ出して進める。
+    console.warn(
+      '[auth-manager] refresh_token cookie not found; verify host_permissions and AuthCore Set-Cookie',
+    );
   }
   await scheduleRefresh(token.expires_in);
   return payload.exp;
@@ -139,11 +146,25 @@ export async function handleLogin(request: LoginRequest): Promise<{ user: User }
   return { user };
 }
 
+let refreshInflight: Promise<TokenResponse> | null = null;
+
 export async function refreshTokens(): Promise<TokenResponse> {
-  const cookieHeader = await buildCookieHeader();
-  const response = await refreshRequest({ cookieHeader });
-  await persistTokenResponse(response);
-  return response;
+  // AuthCore の Refresh Token Rotation は 1 family 内で有効な refresh は 1 本のみ。
+  // 並行発火させると再利用検知で family ごと無効化されるため、in-flight の Promise を共有する。
+  if (refreshInflight) {
+    return refreshInflight;
+  }
+  refreshInflight = (async () => {
+    try {
+      const cookieHeader = await buildCookieHeader();
+      const response = await refreshRequest({ cookieHeader });
+      await persistTokenResponse(response);
+      return response;
+    } finally {
+      refreshInflight = null;
+    }
+  })();
+  return refreshInflight;
 }
 
 export async function handleLogout(): Promise<void> {
