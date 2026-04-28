@@ -1,0 +1,60 @@
+import type { AuthState, LoginRequest, User } from './types';
+
+export const AuthMessageType = {
+  LOGIN: 'AUTH_LOGIN',
+  LOGOUT: 'AUTH_LOGOUT',
+  GET_STATE: 'AUTH_GET_STATE',
+  REFRESH: 'AUTH_REFRESH',
+  FETCH: 'AUTH_FETCH',
+} as const;
+
+export type AuthMessageType = (typeof AuthMessageType)[keyof typeof AuthMessageType];
+
+export interface AuthFetchPayload {
+  path: string;
+  init?: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+  };
+}
+
+export interface AuthFetchResult {
+  status: number;
+  ok: boolean;
+  body: unknown;
+}
+
+export type AuthMessage =
+  | { type: typeof AuthMessageType.LOGIN; payload: LoginRequest }
+  | { type: typeof AuthMessageType.LOGOUT }
+  | { type: typeof AuthMessageType.GET_STATE }
+  | { type: typeof AuthMessageType.REFRESH }
+  | { type: typeof AuthMessageType.FETCH; payload: AuthFetchPayload };
+
+export interface AuthErrorPayload {
+  code: string;
+  message: string;
+  status?: number;
+}
+
+export type AuthResponse<T = undefined> =
+  | { ok: true; data: T }
+  | { ok: false; error: AuthErrorPayload };
+
+export type LoginResponseData = { user: User };
+
+export type GetStateResponseData = AuthState;
+
+export type FetchResponseData = AuthFetchResult;
+
+export function isAuthMessage(value: unknown): value is AuthMessage {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const candidate = value as { type?: unknown };
+  return (
+    typeof candidate.type === 'string' &&
+    (Object.values(AuthMessageType) as string[]).includes(candidate.type)
+  );
+}
