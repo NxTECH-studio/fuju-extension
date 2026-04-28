@@ -10,6 +10,7 @@ import type {
   FetchResponseData,
   GetStateResponseData,
   LoginResponseData,
+  MfaVerifyResponseData,
 } from '../shared/auth/messages';
 import * as authManager from './auth-manager';
 
@@ -32,6 +33,16 @@ async function dispatch(message: AuthMessage): Promise<AuthResponse<unknown>> {
       case AuthMessageType.LOGIN: {
         const data: LoginResponseData = await authManager.handleLogin(message.payload);
         return { ok: true, data };
+      }
+      case AuthMessageType.MFA_VERIFY: {
+        const data: MfaVerifyResponseData = await authManager.handleMfaVerify(
+          message.payload,
+        );
+        return { ok: true, data };
+      }
+      case AuthMessageType.MFA_CANCEL: {
+        await authManager.handleMfaCancel();
+        return { ok: true, data: undefined };
       }
       case AuthMessageType.LOGOUT: {
         await authManager.handleLogout();
