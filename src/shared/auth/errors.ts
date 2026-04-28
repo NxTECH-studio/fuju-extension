@@ -11,12 +11,23 @@ export const AuthErrorCode = {
   TOKEN_MALFORMED: 'TOKEN_MALFORMED',
   MFA_REQUIRED: 'MFA_REQUIRED',
   MFA_NOT_ENABLED: 'MFA_NOT_ENABLED',
+  MFA_NOT_PENDING: 'MFA_NOT_PENDING',
+  INVALID_TOTP: 'INVALID_TOTP',
+  PRE_TOKEN_INVALID: 'PRE_TOKEN_INVALID',
+  PRE_TOKEN_EXPIRED: 'PRE_TOKEN_EXPIRED',
   RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
   INVALID_REQUEST: 'INVALID_REQUEST',
   MISSING_REQUIRED_FIELD: 'MISSING_REQUIRED_FIELD',
   INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR',
   SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
   NETWORK_ERROR: 'NETWORK_ERROR',
+  /**
+   * @deprecated 本タスク（support-mfa-login）以降、TOTP MFA は通常フローで対応済み。
+   *   このコードは下記用途のために残置している:
+   *     - recovery code 等、本拡張ではまだ未対応の MFA サブケースのフォールバック
+   *     - 将来 MFA 全体を一時的に無効化（feature flag 等）したい場合の再利用
+   *   通常の TOTP MFA フローでは throw しない。
+   */
   MFA_NOT_SUPPORTED: 'MFA_NOT_SUPPORTED',
 } as const;
 

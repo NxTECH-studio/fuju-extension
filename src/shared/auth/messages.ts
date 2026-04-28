@@ -1,7 +1,15 @@
-import type { AuthState, LoginRequest, User } from './types';
+import type {
+  AuthState,
+  LoginRequest,
+  MfaChallenge,
+  MfaVerifyRequest,
+  User,
+} from './types';
 
 export const AuthMessageType = {
   LOGIN: 'AUTH_LOGIN',
+  MFA_VERIFY: 'AUTH_MFA_VERIFY',
+  MFA_CANCEL: 'AUTH_MFA_CANCEL',
   LOGOUT: 'AUTH_LOGOUT',
   GET_STATE: 'AUTH_GET_STATE',
   REFRESH: 'AUTH_REFRESH',
@@ -27,6 +35,8 @@ export interface AuthFetchResult {
 
 export type AuthMessage =
   | { type: typeof AuthMessageType.LOGIN; payload: LoginRequest }
+  | { type: typeof AuthMessageType.MFA_VERIFY; payload: MfaVerifyRequest }
+  | { type: typeof AuthMessageType.MFA_CANCEL }
   | { type: typeof AuthMessageType.LOGOUT }
   | { type: typeof AuthMessageType.GET_STATE }
   | { type: typeof AuthMessageType.REFRESH }
@@ -42,7 +52,11 @@ export type AuthResponse<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: AuthErrorPayload };
 
-export type LoginResponseData = { user: User };
+export type LoginResponseData =
+  | { kind: 'success'; user: User }
+  | { kind: 'mfa_required'; challenge: MfaChallenge };
+
+export type MfaVerifyResponseData = { user: User };
 
 export type GetStateResponseData = AuthState;
 

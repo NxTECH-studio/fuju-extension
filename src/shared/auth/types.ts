@@ -3,6 +3,16 @@ export interface LoginRequest {
   password: string;
 }
 
+// recovery code 対応は対象外。将来拡張する際に判別共用体化する。
+export interface MfaVerifyRequest {
+  code: string;
+}
+
+export interface MfaChallenge {
+  // popup 側に渡す MFA 入力フェーズの情報。pre_token そのものは渡さない。
+  expiresAt: number; // Unix seconds, pre_token の `exp`
+}
+
 export interface TokenResponse {
   access_token: string;
   token_type: 'Bearer';
