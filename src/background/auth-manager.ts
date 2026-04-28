@@ -55,21 +55,18 @@ function setPendingMfa(preToken: string): MfaChallenge {
   const payload = decodeJwt(preToken);
   const expiresAt = payload.exp;
   const nowSeconds = Math.floor(Date.now() / 1000);
-  const ttlMs = Math.max((expiresAt - nowSeconds) * 1000, 0);
-  const timeoutId = ttlMs > 0
-    ? setTimeout(() => {
-        pendingMfa = null;
-      }, ttlMs)
-    : null;
-  pendingMfa = { preToken, expiresAt, timeoutId };
+  const ttlMs = (expiresAt - nowSeconds) * 1000;
   if (ttlMs <= 0) {
-    pendingMfa = null;
     throw new AuthCoreApiError(
       401,
       AuthErrorCode.PRE_TOKEN_EXPIRED,
       'Pre-token has already expired',
     );
   }
+  const timeoutId = setTimeout(() => {
+    pendingMfa = null;
+  }, ttlMs);
+  pendingMfa = { preToken, expiresAt, timeoutId };
   return { expiresAt };
 }
 

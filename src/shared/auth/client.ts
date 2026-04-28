@@ -111,6 +111,8 @@ export async function verifyMfa(
   preToken: string,
   body: MfaVerifyRequest,
 ): Promise<TokenResponse> {
+  // AuthCore 仕様: /v1/auth/mfa/verify は pre_token を `Authorization: Bearer` で受け取る
+  // (openapi.yaml: securityScheme `preToken`)。
   return request<TokenResponse>('/v1/auth/mfa/verify', {
     method: 'POST',
     bearerToken: preToken,
