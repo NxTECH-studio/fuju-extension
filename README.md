@@ -1,73 +1,75 @@
-# React + TypeScript + Vite
+# fuju-extension
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Browser extension (Manifest V3) that drives auto form-input flows for the Fuju
+ecosystem. The popup ships a login screen backed by [AuthCore](../auth/README.md);
+tokens are persisted across browser restarts via `chrome.storage.local` and the
+service worker handles refresh / logout transparently.
 
-Currently, two official plugins are available:
+## Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js (matching `package.json`'s engines, see `npm` for current toolchain).
+- A running AuthCore instance reachable from the browser. Locally:
 
-## React Compiler
+  ```sh
+  cd ../auth && docker-compose up
+  ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Setup
 
-## Expanding the ESLint configuration
+1. Install dependencies: `npm install`
+2. Copy the env template and adjust as needed:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+   ```sh
+   cp .env.example .env
+   # edit VITE_AUTHCORE_BASE_URL if AuthCore is not on http://localhost:8080
+   ```
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+3. Build the extension: `npm run build` (outputs to `dist/`).
+4. Open `chrome://extensions`, enable Developer Mode, and load `dist/` as an
+   unpacked extension.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Scripts
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- `npm run dev` — Vite watch build for iterative development.
+- `npm run build` — Type-check (`tsc -b`) and bundle.
+- `npm run lint` / `npm run lint:fix` — ESLint.
+- `npm run format` — Prettier + ESLint fix.
+
+## AuthCore integration notes
+
+The extension talks to AuthCore over HTTPS (`fetch` with `credentials: 'include'`).
+A few cross-origin specifics apply:
+
+- **CORS**: AuthCore's `ALLOWED_ORIGINS` must include the extension's origin
+  (`chrome-extension://<extension-id>`). The extension ID changes between
+  unpacked installs and the published version, so add every origin you need.
+- **Refresh token cookie**: AuthCore returns the refresh token as an HttpOnly
+  `refresh_token` cookie scoped to `/v1/auth`. The background service worker
+  reads it via `chrome.cookies.get` and stores a backup copy in
+  `chrome.storage.local` so refresh continues to work even when the cookie is
+  not auto-attached (e.g. across certain MV3 worker lifecycles).
+- **Permissions**: `manifest.json` declares `cookies` (cookie read), `alarms`
+  (token auto-refresh scheduling), and `host_permissions` for the AuthCore
+  origins. Update `host_permissions` whenever you point at a new AuthCore
+  deployment.
+
+## Project layout
+
+```
+src/
+  background/         service worker entry, auth manager, message dispatcher
+  content/            content script entry
+  popup/              React popup UI (login form, dashboard)
+    auth/             AuthProvider, useAuth, LoginForm, Dashboard
+  shared/
+    config.ts         AUTHCORE_BASE_URL and cookie constants
+    auth/             API client, storage wrapper, message protocol, types
+public/manifest.json  Manifest V3 declaration
+popup.html            Vite entry for the popup
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## MFA
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+The current implementation refuses MFA-protected accounts and surfaces a
+dedicated error message. MFA verification (`/v1/auth/mfa/verify`) is tracked as
+a follow-up task.
