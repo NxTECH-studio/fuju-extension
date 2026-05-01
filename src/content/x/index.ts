@@ -1,12 +1,11 @@
 import processTweetElement from './userData';
 
-
 const x = () => {
   // ツイート要素を取得する関数
   const getTweetElements = async () => {
     const elems = document.querySelectorAll('[data-testId="tweet"]');
     console.log(`ツイート数: ${elems.length}`);
-    
+
     for (const elem of elems) {
       await processTweetElement(elem);
     }
@@ -29,9 +28,9 @@ const x = () => {
 
   // observerの設定
   const config = {
-    childList: true,      // 子要素の追加/削除を監視
-    subtree: true,        // 全ての子孫要素の変更を監視
-    attributes: true,    // 属性変更は監視しない
+    childList: true, // 子要素の追加/削除を監視
+    subtree: true, // 全ての子孫要素の変更を監視
+    attributes: true, // 属性変更は監視しない
   };
 
   // document.bodyの変更を監視開始

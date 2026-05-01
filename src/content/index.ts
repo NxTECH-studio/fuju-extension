@@ -1,4 +1,4 @@
-import x from './x'
+import x from './x';
 
 console.log('[content] loaded on', location.href);
 
@@ -9,7 +9,7 @@ switch (page) {
   case 'x.com':
   case 'twitter.com':
     x();
-    break
+    break;
   default:
     console.log('NOT SUPPORTED');
 }

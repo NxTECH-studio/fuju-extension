@@ -6,8 +6,8 @@ const extractUserId = (href: string): string => {
 };
 
 const getFujuIcon = (username: Element): HTMLElement | null => {
-  return Array.from(username.children).find(child =>
-    (child as HTMLElement).dataset.inserted === 'true'
+  return Array.from(username.children).find(
+    (child) => (child as HTMLElement).dataset.inserted === 'true',
   ) as HTMLElement | null;
 };
 
@@ -17,10 +17,7 @@ const setFujuIconLoading = (fujuIcon: HTMLElement): void => {
   fujuIcon.style.opacity = '0.5';
 };
 
-const insertFujuIcon = (
-  username: Element,
-  fujuUserId: string | null,
-): void => {
+const insertFujuIcon = (username: Element, fujuUserId: string | null): void => {
   let fujuIcon = getFujuIcon(username);
 
   // 既存のアイコンがなければ新規作成
@@ -90,6 +87,5 @@ const processTweetElement = async (elem: Element): Promise<void> => {
   console.log(`ユーザー: ${userId}, fujuUserId: ${fujuUserId}`);
   insertFujuIcon(username, fujuUserId);
 };
-
 
 export default processTweetElement;

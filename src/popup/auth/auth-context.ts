@@ -1,11 +1,6 @@
 import { createContext } from 'react';
 import type { AuthErrorPayload } from '../../shared/auth/messages';
-import type {
-  LoginRequest,
-  MfaChallenge,
-  MfaVerifyRequest,
-  User,
-} from '../../shared/auth/types';
+import type { LoginRequest, MfaChallenge, MfaVerifyRequest, User } from '../../shared/auth/types';
 
 export interface AuthContextValue {
   user: User | null;
