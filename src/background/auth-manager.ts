@@ -24,11 +24,7 @@ import type {
   TokenResponse,
   User,
 } from '../shared/auth/types';
-import {
-  AUTHCORE_BASE_URL,
-  REFRESH_COOKIE_NAME,
-  REFRESH_COOKIE_PATH,
-} from '../shared/config';
+import { AUTHCORE_BASE_URL, REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH } from '../shared/config';
 
 const REFRESH_ALARM_NAME = 'auth.refresh';
 const REFRESH_LEAD_SECONDS = 60;
@@ -173,10 +169,7 @@ export async function init(): Promise<void> {
 
 export async function handleLogin(
   request: LoginRequest,
-): Promise<
-  | { kind: 'success'; user: User }
-  | { kind: 'mfa_required'; challenge: MfaChallenge }
-> {
+): Promise<{ kind: 'success'; user: User } | { kind: 'mfa_required'; challenge: MfaChallenge }> {
   const response = await loginRequest(request);
   if (isPreTokenResponse(response)) {
     const challenge = setPendingMfa(response.pre_token);
@@ -188,9 +181,7 @@ export async function handleLogin(
   return { kind: 'success', user };
 }
 
-export async function handleMfaVerify(
-  request: MfaVerifyRequest,
-): Promise<{ user: User }> {
+export async function handleMfaVerify(request: MfaVerifyRequest): Promise<{ user: User }> {
   if (!pendingMfa) {
     throw new AuthCoreApiError(
       400,

@@ -1,10 +1,4 @@
-import type {
-  AuthState,
-  LoginRequest,
-  MfaChallenge,
-  MfaVerifyRequest,
-  User,
-} from './types';
+import type { AuthState, LoginRequest, MfaChallenge, MfaVerifyRequest, User } from './types';
 
 export const AuthMessageType = {
   LOGIN: 'AUTH_LOGIN',

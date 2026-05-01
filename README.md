@@ -68,6 +68,9 @@ public/manifest.json  Manifest V3 declaration
 popup.html            Vite entry for the popup
 ```
 
+For a project-wide tour (features, layout, message protocol, storage), see
+[`docs/overview.md`](./docs/overview.md).
+
 ## MFA
 
 The current implementation refuses MFA-protected accounts and surfaces a

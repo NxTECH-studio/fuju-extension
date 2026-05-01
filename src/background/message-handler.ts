@@ -1,8 +1,5 @@
 import { AuthCoreApiError, AuthErrorCode } from '../shared/auth/errors';
-import {
-  AuthMessageType,
-  isAuthMessage,
-} from '../shared/auth/messages';
+import { AuthMessageType, isAuthMessage } from '../shared/auth/messages';
 import type {
   AuthErrorPayload,
   AuthMessage,
@@ -35,9 +32,7 @@ async function dispatch(message: AuthMessage): Promise<AuthResponse<unknown>> {
         return { ok: true, data };
       }
       case AuthMessageType.MFA_VERIFY: {
-        const data: MfaVerifyResponseData = await authManager.handleMfaVerify(
-          message.payload,
-        );
+        const data: MfaVerifyResponseData = await authManager.handleMfaVerify(message.payload);
         return { ok: true, data };
       }
       case AuthMessageType.MFA_CANCEL: {
