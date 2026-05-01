@@ -10,12 +10,7 @@ import type {
   MfaVerifyResponseData,
 } from '../../shared/auth/messages';
 import { STORAGE_KEYS } from '../../shared/auth/storage';
-import type {
-  LoginRequest,
-  MfaChallenge,
-  MfaVerifyRequest,
-  User,
-} from '../../shared/auth/types';
+import type { LoginRequest, MfaChallenge, MfaVerifyRequest, User } from '../../shared/auth/types';
 import { AuthContext } from './auth-context';
 import type { AuthContextValue } from './auth-context';
 

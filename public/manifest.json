@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Auto Form Input",
-  "description": "Base Level Extension",
+  "name": "ふじゅ～システム！",
+  "description": "ふじゅ～システムは、ブラウザ上で動作をする感情評価システムおよび、感情評価をもとにふじゅ～を付与するシステム全般のインターフェースです。",
   "version": "0.1.0",
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Auto Form Input"
+    "default_title": "ふじゅ～システム！"
   },
   "background": {
     "service_worker": "background.js",
@@ -19,5 +19,5 @@
     }
   ],
   "permissions": ["storage", "activeTab", "cookies", "alarms"],
-  "host_permissions": ["http://localhost:8080/*", "https://auth.example.com/*", "https://x.com/*", "https://*.x.com/*", "https://twitter.com/*", "https://*.twitter.com/*"]
+  "host_permissions": ["http://localhost:8080/*", "https://auth.example.com/*", "https://*.fujupay.app/*", "https://fujupay.app/*", "https://x.com/*", "https://*.x.com/*", "https://twitter.com/*", "https://*.twitter.com/*"]
 }

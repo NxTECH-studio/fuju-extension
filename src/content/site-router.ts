@@ -22,11 +22,7 @@ function buildContext(): SiteContext {
   };
 }
 
-function safeCall(
-  handlerName: string,
-  phase: string,
-  fn: () => void,
-): void {
+function safeCall(handlerName: string, phase: string, fn: () => void): void {
   try {
     fn();
   } catch (e) {
@@ -57,9 +53,7 @@ export function startSiteRouter(handlers: SiteHandler[]): void {
   const onChange = handler.onUrlChange;
   if (onChange) {
     onUrlChange(() => {
-      safeCall(handler.name, 'onUrlChange', () =>
-        onChange.call(handler, buildContext()),
-      );
+      safeCall(handler.name, 'onUrlChange', () => onChange.call(handler, buildContext()));
     });
   }
 }

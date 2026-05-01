@@ -19,10 +19,7 @@ export function onUrlChange(handler: () => void): () => void {
 
   const wrap = (key: HistoryStateMethod) => {
     const original = history[key];
-    const wrapped = function (
-      this: History,
-      ...args: Parameters<typeof original>
-    ) {
+    const wrapped = function (this: History, ...args: Parameters<typeof original>) {
       const result = original.apply(this, args);
       queueMicrotask(handler);
       return result;
