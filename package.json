@@ -7,9 +7,9 @@
     "dev": "vite build --watch --mode development",
     "build": "tsc -b && vite build",
     "prepare": "husky install",
-    "lint": "eslint 'src/**/*.{js,jsx,ts,tsx}'",
-    "lint:fix": "eslint 'src/**/*.{js,jsx,ts,tsx}' --fix",
-    "format": "npm run lint:fix && prettier --write 'src/**/*.{js,jsx,ts,tsx,css,md,json}'"
+    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
+    "lint:fix": "eslint \"src/**/*.{js,jsx,ts,tsx}\" --fix",
+    "format": "npm run lint:fix && prettier --write \"src/**/*.{js,jsx,ts,tsx,css,md,json}\""
   },
   "dependencies": {
     "@types/chrome": "^0.1.40",
