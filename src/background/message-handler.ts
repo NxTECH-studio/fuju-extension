@@ -8,8 +8,11 @@ import type {
   GetStateResponseData,
   LoginResponseData,
   MfaVerifyResponseData,
+  ProviderCompleteConnectResponseData,
+  ProviderGetConnectUrlResponseData,
 } from '../shared/auth/messages';
 import * as authManager from './auth-manager';
+import * as providerManager from './provider-manager';
 
 function toErrorPayload(error: unknown): AuthErrorPayload {
   if (error instanceof AuthCoreApiError) {
@@ -56,6 +59,21 @@ async function dispatch(message: AuthMessage): Promise<AuthResponse<unknown>> {
           message.payload.path,
           message.payload.init,
         );
+        return { ok: true, data };
+      }
+      case AuthMessageType.PROVIDER_GET_CONNECT_URL: {
+        const data: ProviderGetConnectUrlResponseData = await providerManager.handleGetConnectUrl(
+          message.payload.provider,
+        );
+        return { ok: true, data };
+      }
+      case AuthMessageType.PROVIDER_COMPLETE_CONNECT: {
+        const data: ProviderCompleteConnectResponseData =
+          await providerManager.handleCompleteConnect(
+            message.payload.provider,
+            message.payload.code,
+            message.payload.state,
+          );
         return { ok: true, data };
       }
       default: {
