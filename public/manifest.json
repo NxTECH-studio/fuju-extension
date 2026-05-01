@@ -19,5 +19,5 @@
     }
   ],
   "permissions": ["storage", "activeTab", "cookies", "alarms"],
-  "host_permissions": ["http://localhost:8080/*", "https://auth.example.com/*"]
+  "host_permissions": ["http://localhost:8080/*", "https://auth.example.com/*", "https://x.com/*", "https://*.x.com/*"]
 }

@@ -10,7 +10,9 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.runtime.onStartup.addListener(() => {
+  console.log('[background] START fuju extension')
   void authManager.init();
 });
 
 void authManager.init();
+
