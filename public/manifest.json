@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Auto Form Input",
-  "description": "Base Level Extension",
+  "default_locale": "ja",
+  "name": "__MSG_extName__",
+  "description": "__MSG_extDescription__",
   "version": "0.1.0",
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Auto Form Input"
+    "default_title": "__MSG_actionDefaultTitle__"
   },
   "background": {
     "service_worker": "background.js",
