@@ -1,5 +1,6 @@
 import { createLoadingIcon } from '../img/loadingIcon';
 import { fujuData } from '../api/fujuUserCache';
+import type { FujuLookupResult } from '../api/fujuUserCache';
 
 const extractUserId = (href: string): string => {
   return href.split('/').findLast(Boolean) ?? '';
@@ -17,7 +18,7 @@ const setFujuIconLoading = (fujuIcon: HTMLElement): void => {
   fujuIcon.style.opacity = '0.5';
 };
 
-const insertFujuIcon = (username: Element, fujuUserId: string | null): void => {
+const insertFujuIcon = (username: Element, result: FujuLookupResult | null): void => {
   let fujuIcon = getFujuIcon(username);
 
   // 既存のアイコンがなければ新規作成
@@ -30,19 +31,20 @@ const insertFujuIcon = (username: Element, fujuUserId: string | null): void => {
   // アイコンの状態を更新
   fujuIcon.dataset.loading = 'false';
 
-  if (fujuUserId) {
-    fujuIcon.dataset.fujuUserId = fujuUserId;
-    fujuIcon.style.opacity = '1';
-  } else {
+  if (result === null) {
+    // ネットワーク失敗などで結果不明
     fujuIcon.dataset.fujuUserId = 'null';
     fujuIcon.style.opacity = '0.3';
+    return;
   }
+
+  // dataset.fujuUserId は旧来のフィールド名を維持しつつ、
+  // 値の意味を「Fuju ユーザーかどうかの真偽値文字列」に切り替えている。
+  fujuIcon.dataset.fujuUserId = result.exists ? 'true' : 'false';
+  fujuIcon.style.opacity = result.exists ? '1' : '0.3';
 };
 
-const processTweetElement = async (elem: Element): Promise<void> => {
-  const username = elem.querySelector('[data-testid="User-Name"]');
-  console.log(username != null);
-
+const insertIcon = async (username: Element) => {
   if (!username || username.children.length < 2) {
     return;
   }
@@ -83,9 +85,17 @@ const processTweetElement = async (elem: Element): Promise<void> => {
   setFujuIconLoading(fujuIcon);
 
   // API リクエスト実行
-  const fujuUserId = await fujuData(userId);
-  console.log(`ユーザー: ${userId}, fujuUserId: ${fujuUserId}`);
-  insertFujuIcon(username, fujuUserId);
+  const result = await fujuData(userId);
+  console.log(`ユーザー: ${userId}, fuju exists: ${result === null ? 'unknown' : result.exists}`);
+  insertFujuIcon(username, result);
+};
+
+const processTweetElement = async (elem: Element): Promise<void> => {
+  const usernames = elem.querySelectorAll('[data-testid="User-Name"]');
+  console.log(usernames != null);
+  usernames.forEach((username) => {
+    insertIcon(username);
+  });
 };
 
 export default processTweetElement;

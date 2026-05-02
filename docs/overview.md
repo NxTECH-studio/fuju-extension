@@ -12,8 +12,9 @@
 [AuthCore](../README.md) で認証してから拡張機能を使うことを想定しており、
 popup から AuthCore のアカウントでログイン（必要に応じて TOTP MFA）して使います。
 
-> Fuju ユーザー判定 API（`/api/fuju-user/<userId>`）の具体仕様は本リポジトリ外であり、
-> エンドポイントの最終仕様は未確認です。詳細は「既知の制約」を参照。
+> Fuju ユーザー判定は AuthCore の `/v1/users/lookup?provider=x&q=<handle>` を叩き、
+> レスポンス `{ exists: boolean }` で「Fuju ユーザーかどうか」のみを判定します。
+> アイコン URL や詳細情報の取得は本タスクのスコープ外です。詳細は「既知の制約」を参照。
 
 ## 構成
 
@@ -37,7 +38,7 @@ Manifest V3 の 3 サーフェスをすべて使います。
 - 通常ログインと TOTP MFA に対応。詳細な実装方針はそれぞれのタスク資料を参照:
   - [`docs/tasks/implement-login-with-persistence.md`](./tasks/implement-login-with-persistence.md)
   - [`docs/tasks/support-mfa-login.md`](./tasks/support-mfa-login.md)
-- popup の `LoginForm` で identifier（メールまたは公開ID）/ password を入力し、
+- popup の `LoginForm` で identifier（メールまたは公開 ID）/ password を入力し、
   background が `/v1/auth/login` を呼びます (`src/shared/auth/client.ts`)。
 - レスポンスが `PreTokenResponse`（`mfa_required: true`）だった場合は popup が
   `MfaForm` に切り替わり、6 桁の TOTP コードで `/v1/auth/mfa/verify` を完了させます。
@@ -61,7 +62,9 @@ Manifest V3 の 3 サーフェスをすべて使います。
 - Fuju ユーザー判定は `src/content/api/fujuUserCache.ts` の `fujuData(userId)` が担当。
   - メモリ上の `Map` ベースキャッシュで同一ユーザーの重複 fetch を回避。
   - 同一 userId の進行中リクエストは `pendingRequests` Map で 1 本に共有。
-  - 取得は `fetch('/api/fuju-user/<userId>')`（X.com の同一オリジン相対パス）。
+  - 取得は `fetch(${AUTHCORE_BASE_URL}/v1/users/lookup?provider=x&q=<userId>)`。
+    レスポンスは `{ exists: boolean }` で、404 は `{ exists: false }` として扱い、
+    ネットワーク失敗は `null`（結果不明）として扱います。
 - ローディング中は自前 SVG アイコン (`src/content/img/loadingIcon.ts` の
   `createLoadingIcon`) を `opacity: 0.5` で表示し、解決後に
   `dataset.fujuUserId` と `opacity` を更新します。
@@ -73,13 +76,14 @@ src/
   background/
     index.ts             service worker エントリ。alarm/message ハンドラ登録と init 呼び出し
     auth-manager.ts      トークン永続化、refresh、MFA pre_token (memory only)、alarm スケジュール
+    provider-manager.ts  /v1/auth/connect/{provider} 系の link 用ハンドラ（X / Google）
     message-handler.ts   chrome.runtime.onMessage のディスパッチと sender 検証
   content/
     index.ts             ホスト名で X 用ロジックを起動するエントリ
     x/index.ts           [data-testid="tweet"] の MutationObserver 監視と起動
     x/userData.ts        ツイート要素ごとに User-Name 直下へ Fuju アイコンを差し込む
     img/loadingIcon.ts   ローディング表示用の自前 SVG アイコン生成
-    api/fujuUserCache.ts /api/fuju-user/<userId> の fetch + キャッシュ + in-flight 共有
+    api/fujuUserCache.ts /v1/users/lookup の fetch + キャッシュ + in-flight 共有（exists 判定）
   popup/
     main.tsx             React のルート
     App.tsx              AuthProvider でラップし AuthGate で画面分岐
@@ -88,7 +92,7 @@ src/
     auth/useAuth.ts        Context を取り出すフック
     auth/LoginForm.tsx     identifier / password 入力 UI
     auth/MfaForm.tsx       TOTP 6 桁コード入力 UI（キャンセルボタン付き）
-    auth/Dashboard.tsx     ログイン済みユーザーの表示とログアウト
+    auth/Dashboard.tsx     ログイン済みユーザーの表示、ログアウト、X / Google との連携ボタン
   shared/
     config.ts            AUTHCORE_BASE_URL（VITE_AUTHCORE_BASE_URL から読込）と Cookie 定数
     auth/
@@ -98,6 +102,7 @@ src/
       tokens.ts          JWT payload デコードと isExpired
       storage.ts         chrome.storage.local の薄いラッパー（access token / user 等）
       client.ts          AuthCore REST クライアント（login / verifyMfa / refresh / logout / getProfile）
+      providers.ts       provider 種別と /v1/auth/connect・/v1/auth/callback 用の link 専用クライアント
 public/
   manifest.json          Manifest V3 宣言
   _locales/<lang>/messages.json  Chrome 拡張 i18n リソース（manifest 表示用）
@@ -108,15 +113,17 @@ popup.html               popup の Vite エントリ
 
 `src/shared/auth/messages.ts` で型安全に定義されています。
 
-| `AuthMessageType` 値（定数）        | 文字列値             | 用途                                                              |
-| ----------------------------------- | -------------------- | ----------------------------------------------------------------- |
-| `AuthMessageType.LOGIN`             | `AUTH_LOGIN`         | identifier/password でログイン。MFA 必要時は `mfa_required` を返す |
-| `AuthMessageType.MFA_VERIFY`        | `AUTH_MFA_VERIFY`    | 保持中の `pre_token` と TOTP コードで MFA を完了                  |
-| `AuthMessageType.MFA_CANCEL`        | `AUTH_MFA_CANCEL`    | 保持中の `pre_token` を破棄して LoginForm に戻る                   |
-| `AuthMessageType.LOGOUT`            | `AUTH_LOGOUT`        | サーバへ logout、ストレージとアラームをクリア                     |
-| `AuthMessageType.GET_STATE`         | `AUTH_GET_STATE`     | 現在の `AuthState`（`user` / `isAuthenticated`）を取得            |
-| `AuthMessageType.REFRESH`           | `AUTH_REFRESH`       | 即時リフレッシュをトリガ                                          |
-| `AuthMessageType.FETCH`             | `AUTH_FETCH`         | access token を付けた認証付き fetch を background 経由で実行       |
+| `AuthMessageType` 値（定数）                | 文字列値                    | 用途                                                                             |
+| ------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------- |
+| `AuthMessageType.LOGIN`                     | `AUTH_LOGIN`                | identifier/password でログイン。MFA 必要時は `mfa_required` を返す               |
+| `AuthMessageType.MFA_VERIFY`                | `AUTH_MFA_VERIFY`           | 保持中の `pre_token` と TOTP コードで MFA を完了                                 |
+| `AuthMessageType.MFA_CANCEL`                | `AUTH_MFA_CANCEL`           | 保持中の `pre_token` を破棄して LoginForm に戻る                                 |
+| `AuthMessageType.LOGOUT`                    | `AUTH_LOGOUT`               | サーバへ logout、ストレージとアラームをクリア                                    |
+| `AuthMessageType.GET_STATE`                 | `AUTH_GET_STATE`            | 現在の `AuthState`（`user` / `isAuthenticated`）を取得                           |
+| `AuthMessageType.REFRESH`                   | `AUTH_REFRESH`              | 即時リフレッシュをトリガ                                                         |
+| `AuthMessageType.FETCH`                     | `AUTH_FETCH`                | access token を付けた認証付き fetch を background 経由で実行                     |
+| `AuthMessageType.PROVIDER_GET_CONNECT_URL`  | `PROVIDER_GET_CONNECT_URL`  | 背景で `/v1/auth/connect/{provider}` の authorize URL を取得                     |
+| `AuthMessageType.PROVIDER_COMPLETE_CONNECT` | `PROVIDER_COMPLETE_CONNECT` | `launchWebAuthFlow` から得た code/state で `/v1/auth/callback/{provider}` を完了 |
 
 レスポンスは `AuthResponse<T> = { ok: true; data: T } | { ok: false; error: AuthErrorPayload }`。
 
@@ -155,7 +162,7 @@ content script はこのチャネルでは認証要求を発行しません。
   （最低 0.5 分）。`registerAlarmHandler` がリスナを登録し、失敗時はエラーを
   warn してから `clearAuthState` でログアウト状態に戻します。
 - **401 リトライ**:
-  `authenticatedFetch` は 401 を受けたら 1 回だけ refresh→再 fetch を試み、
+  `authenticatedFetch` は 401 を受けたら 1 回だけ refresh→ 再 fetch を試み、
   失敗したら `clearAll` でログアウトします。
 
 ## ビルドと配布
@@ -175,9 +182,9 @@ content script はこのチャネルでは認証要求を発行しません。
 
 `.env.example` をコピーして `.env` を作成してから利用します。
 
-| 変数名                     | デフォルト                | 用途                                                  |
-| -------------------------- | ------------------------- | ----------------------------------------------------- |
-| `VITE_AUTHCORE_BASE_URL`   | `http://localhost:8080`   | popup / background が AuthCore REST API を呼ぶ際の URL |
+| 変数名                   | デフォルト              | 用途                                                   |
+| ------------------------ | ----------------------- | ------------------------------------------------------ |
+| `VITE_AUTHCORE_BASE_URL` | `http://localhost:8080` | popup / background が AuthCore REST API を呼ぶ際の URL |
 
 `AUTHCORE_BASE_URL` は `src/shared/config.ts` で末尾スラッシュを除去して読み込みます。
 未設定時は上記デフォルトにフォールバックします。
@@ -188,15 +195,12 @@ content script はこのチャネルでは認証要求を発行しません。
   拡張機能 ID（`chrome-extension://<id>`）が変わるため、AuthCore 側の
   `ALLOWED_ORIGINS`（CORS allow-list）に必要な origin を追加する運用が必要です。
   詳細は `README.md` の "AuthCore integration notes" を参照。
-- **Fuju ユーザー判定 API**: `src/content/api/fujuUserCache.ts` の問い合わせ先は
-  `fetch('/api/fuju-user/<userId>')` で **content script が走るオリジン
-  （x.com / twitter.com）への相対 fetch** です。`host_permissions` には
-  AuthCore 用の `http://localhost:8080/*` / `https://auth.example.com/*` と
-  X.com 系の `https://x.com/*` / `https://*.x.com/*` が含まれており、この
-  fetch は後者の範囲で送出されます。実際にこのパスがどのサーバへ届く想定か、
-  およびレスポンス JSON の最終仕様はリポジトリ外で、本リポジトリのコード上では未確認です。
-  現在は `data` をそのままキャッシュ値として保持し、null 以外なら「Fuju ユーザー」と
-  判定する実装になっています。
+- **provider 連携の未対応領域**:
+  - **provider 経由の新規ユーザー登録**は未実装（X は `SOCIAL_LINK_ONLY` のため不可、
+    Google はサインアップ動線が大きいため別タスク）。
+  - **provider disconnect UI / API 配線**は未実装（別タスク）。
+  - **Fuju ユーザーのアイコン URL や詳細情報の取得**は未実装。`/v1/users/lookup` は
+    `{ exists: boolean }` のみを返すため、avatar 等の取得には別 API 設計が必要。
 - **popup UI の文言は日本語ハードコード**:
   `LoginForm.tsx` / `MfaForm.tsx` / `Dashboard.tsx` / `App.tsx` のローディング
   メッセージなどはすべて日本語で直書きされており、`chrome.i18n` には乗っていません。
