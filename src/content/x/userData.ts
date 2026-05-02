@@ -12,88 +12,54 @@ const getFujuIcon = (username: Element): HTMLElement | null => {
   ) as HTMLElement | null;
 };
 
-const setFujuIconLoading = (fujuIcon: HTMLElement): void => {
-  fujuIcon.dataset.inserted = 'true';
-  fujuIcon.dataset.loading = 'true';
-  fujuIcon.style.opacity = '0.5';
-};
-
-const insertFujuIcon = (username: Element, result: FujuLookupResult | null): void => {
-  const fujuIcon = getFujuIcon(username);
-
-  // 呼び出し元の insertIcon() が必ず先にローディングアイコンを挿入する前提
-  if (!fujuIcon) {
-    return;
-  }
-
-  // アイコンの状態を更新
+const updateFujuIcon = (fujuIcon: HTMLElement, result: FujuLookupResult | null): void => {
   fujuIcon.dataset.loading = 'false';
 
   if (result === null) {
-    // API 失敗時の分岐: 現状はローディングアイコンのまま薄く表示する
-    // （将来的に専用エラーアイコンへ差し替える可能性あり）
+    // API 失敗時は既存仕様どおり薄く表示する。
+    // 将来的に専用エラーアイコンへ差し替える可能性あり。
     fujuIcon.dataset.fujuUserId = 'error';
     fujuIcon.style.opacity = '0.3';
     return;
   }
 
-  // dataset.fujuUserId は旧来のフィールド名を維持しつつ、
-  // 値の意味を「Fuju ユーザーかどうかの真偽値文字列」に切り替えている。
   fujuIcon.dataset.fujuUserId = result.exists ? 'true' : 'false';
   fujuIcon.style.opacity = result.exists ? '1' : '0.3';
 };
 
 const insertIcon = async (username: Element) => {
-  if (!username || username.children.length < 2) {
-    return;
-  }
-
-  // 既にアイコンが挿入済みならスキップ
-  const existingIcon = getFujuIcon(username);
-  if (existingIcon?.dataset.loading !== 'true') {
-    // 既に処理完了している
-    if (existingIcon) {
-      return;
-    }
-  }
-
-  // 処理中の場合もスキップ（既に別のリクエストが進行中）
-  if (existingIcon?.dataset.loading === 'true') {
+  if (getFujuIcon(username)) {
+    // 既に挿入済み or 処理中。dataset.inserted を即時セットしているので
+    // 同期的な再エントリでもここで弾ける。
     return;
   }
 
   const a = username.querySelector('a');
   const userHref = a?.href;
-
-  if (!userHref) {
-    return;
-  }
+  if (!userHref) return;
 
   const userId = extractUserId(userHref);
+  if (!userId) return;
 
-  if (!userId) {
-    return;
-  }
+  // ローディングアイコンを作成し、挿入の前に dataset を確定させる。
+  // こうすることで insertBefore 直後の MutationObserver 再発火が
+  // getFujuIcon() で「挿入済み」と認識でき、二重挿入を防げる。
+  const fujuIcon = createLoadingIcon();
+  fujuIcon.dataset.inserted = 'true';
+  fujuIcon.dataset.loading = 'true';
+  fujuIcon.style.opacity = '0.5';
 
-  // ローディング用のアイコンを作成・挿入
-  let fujuIcon = getFujuIcon(username);
-  if (!fujuIcon) {
-    fujuIcon = createLoadingIcon();
-    username.insertBefore(fujuIcon, username.children[1]);
-  }
-  setFujuIconLoading(fujuIcon);
+  const anchor = username.children[1] ?? null;
+  username.insertBefore(fujuIcon, anchor);
 
-  // API リクエスト実行
   const result = await fujuData(userId);
-  console.log(`ユーザー: ${userId}, fuju exists: ${result === null ? 'unknown' : result.exists}`);
-  insertFujuIcon(username, result);
+  updateFujuIcon(fujuIcon, result);
 };
 
 const processTweetElement = async (elem: Element): Promise<void> => {
   const usernames = elem.querySelectorAll('[data-testid="User-Name"]');
-  console.log(usernames != null);
   usernames.forEach((username) => {
-    insertIcon(username);
+    void insertIcon(username);
   });
 };
 
