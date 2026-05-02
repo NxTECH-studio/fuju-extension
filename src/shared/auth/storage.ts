@@ -46,6 +46,11 @@ export async function getAuthState(): Promise<PersistedAuthState> {
   };
 }
 
+export async function getRefreshToken(): Promise<string | null> {
+  const state = await getAuthState();
+  return state.refreshToken;
+}
+
 export async function setTokens(snapshot: AuthTokenSnapshot): Promise<void> {
   const payload: RawStorage = {
     [STORAGE_KEYS.accessToken]: snapshot.accessToken,
@@ -55,14 +60,6 @@ export async function setTokens(snapshot: AuthTokenSnapshot): Promise<void> {
     payload[STORAGE_KEYS.refreshToken] = snapshot.refreshToken;
   }
   await getLocal().set(payload);
-}
-
-export async function setRefreshToken(refreshToken: string | null): Promise<void> {
-  if (refreshToken) {
-    await getLocal().set({ [STORAGE_KEYS.refreshToken]: refreshToken });
-  } else {
-    await getLocal().remove(STORAGE_KEYS.refreshToken);
-  }
 }
 
 export async function setUser(user: User | null): Promise<void> {

@@ -10,7 +10,7 @@ import { AuthCoreApiError, AuthErrorCode } from '../shared/auth/errors';
 import {
   clearAuthState,
   getAuthState,
-  setRefreshToken,
+  getRefreshToken,
   setTokens,
   setUser,
 } from '../shared/auth/storage';
@@ -24,7 +24,6 @@ import type {
   TokenResponse,
   User,
 } from '../shared/auth/types';
-import { AUTHCORE_BASE_URL, REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH } from '../shared/config';
 
 const REFRESH_ALARM_NAME = 'auth.refresh';
 const REFRESH_LEAD_SECONDS = 60;
@@ -66,55 +65,13 @@ function setPendingMfa(preToken: string): MfaChallenge {
   return { expiresAt };
 }
 
-function buildCookieUrl(): string {
-  return `${AUTHCORE_BASE_URL}${REFRESH_COOKIE_PATH}`;
-}
-
-async function readRefreshCookie(): Promise<string | null> {
-  if (!chrome.cookies?.get) {
-    return null;
-  }
-  try {
-    const cookie = await chrome.cookies.get({
-      url: buildCookieUrl(),
-      name: REFRESH_COOKIE_NAME,
-    });
-    return cookie?.value ?? null;
-  } catch (error) {
-    console.warn('[auth-manager] failed to read refresh cookie', error);
-    return null;
-  }
-}
-
-async function buildCookieHeader(): Promise<string | undefined> {
-  const cookieValue = await readRefreshCookie();
-  if (cookieValue) {
-    return `${REFRESH_COOKIE_NAME}=${cookieValue}`;
-  }
-  const persisted = await getAuthState();
-  if (persisted.refreshToken) {
-    return `${REFRESH_COOKIE_NAME}=${persisted.refreshToken}`;
-  }
-  return undefined;
-}
-
 async function persistTokenResponse(token: TokenResponse): Promise<number> {
   const payload = decodeJwt(token.access_token);
   await setTokens({
     accessToken: token.access_token,
     accessTokenExp: payload.exp,
+    refreshToken: token.refresh_token,
   });
-  const refreshCookie = await readRefreshCookie();
-  if (refreshCookie) {
-    await setRefreshToken(refreshCookie);
-  } else {
-    // host_permissions / cookies permission が抜けているか、AuthCore 側で Set-Cookie が
-    // 返っていない可能性が高い。Cookie が読めない場合は次回ブラウザ再起動後の自動復元が
-    // 不可能になるため、警告だけ出して進める。
-    console.warn(
-      '[auth-manager] refresh_token cookie not found; verify host_permissions and AuthCore Set-Cookie',
-    );
-  }
   await scheduleRefresh(token.expires_in);
   return payload.exp;
 }
@@ -233,8 +190,11 @@ export async function refreshTokens(): Promise<TokenResponse> {
   }
   refreshInflight = (async () => {
     try {
-      const cookieHeader = await buildCookieHeader();
-      const response = await refreshRequest({ cookieHeader });
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) {
+        throw new AuthCoreApiError(401, AuthErrorCode.TOKEN_REVOKED, 'No refresh token available');
+      }
+      const response = await refreshRequest({ refreshToken });
       await persistTokenResponse(response);
       return response;
     } finally {
@@ -245,9 +205,9 @@ export async function refreshTokens(): Promise<TokenResponse> {
 }
 
 export async function handleLogout(): Promise<void> {
-  const cookieHeader = await buildCookieHeader();
+  const refreshToken = await getRefreshToken();
   try {
-    await logoutRequest({ cookieHeader });
+    await logoutRequest({ refreshToken });
   } catch (error) {
     console.warn('[auth-manager] logout request failed', error);
   }

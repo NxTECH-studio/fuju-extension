@@ -4,7 +4,6 @@ import { AuthMessageType } from '../../shared/auth/messages';
 import type {
   AuthErrorPayload,
   AuthResponse,
-  ProviderCompleteConnectResponseData,
   ProviderGetConnectUrlResponseData,
 } from '../../shared/auth/messages';
 import type { Provider } from '../../shared/auth/providers';
@@ -56,16 +55,23 @@ function launchWebAuthFlow(url: string): Promise<string> {
   });
 }
 
-function extractCodeAndState(redirectUrl: string): { code: string; state: string } {
-  // launchWebAuthFlow が返す URL は `https://<extension-id>.chromiumapp.org/...?code=...&state=...`
-  // 形式。クエリ文字列から `code` / `state` を抽出する。
+function assertLinkSucceeded(redirectUrl: string): void {
+  // body-mode の link フローでは AuthCore が
+  // `https://<extension-id>.chromiumapp.org/cb#linked=1&provider=...&provider_user_id=...`
+  // 形式の fragment にリンク結果を乗せて返す。エラー時は `#error=...` が乗る。
+  // 本拡張は connect クリック時の provider と発火元から成功表示を組み立てるため、
+  // fragment の値は検証だけ行い破棄する。
   const url = new URL(redirectUrl);
-  const code = url.searchParams.get('code');
-  const state = url.searchParams.get('state');
-  if (!code || !state) {
-    throw new Error('Authorization callback is missing code or state');
+  const fragment = new URLSearchParams(url.hash.replace(/^#/, ''));
+  if (fragment.get('linked') !== '1') {
+    const errorCode = fragment.get('error');
+    throw new Error(
+      errorCode ? `Provider link failed: ${errorCode}` : 'Provider link did not complete',
+    );
   }
-  return { code, state };
+  if (!fragment.get('provider') || !fragment.get('provider_user_id')) {
+    throw new Error('Authorization callback fragment is missing provider info');
+  }
 }
 
 function providerLabel(provider: Provider): string {
@@ -123,22 +129,11 @@ export function Dashboard() {
         return;
       }
 
-      let code: string;
-      let state: string;
       try {
-        ({ code, state } = extractCodeAndState(redirectUrl));
+        assertLinkSucceeded(redirectUrl);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid authorization callback';
         setLinkError(message);
-        return;
-      }
-
-      const completeResponse = await sendMessage<ProviderCompleteConnectResponseData>({
-        type: AuthMessageType.PROVIDER_COMPLETE_CONNECT,
-        payload: { provider, code, state },
-      });
-      if (!completeResponse.ok) {
-        setLinkError(formatLinkError(completeResponse.error));
         return;
       }
 

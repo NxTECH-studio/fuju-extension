@@ -6,7 +6,6 @@ interface RequestOptions {
   method?: string;
   headers?: Record<string, string>;
   body?: unknown;
-  cookieHeader?: string;
   bearerToken?: string;
 }
 
@@ -26,15 +25,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const url = `${AUTHCORE_BASE_URL}${path}`;
   const headers: Record<string, string> = {
     Accept: 'application/json',
+    // body-mode opt-in. AuthCore は X-Token-Delivery: body 指定時に Set-Cookie を返さず
+    // refresh_token を JSON body に乗せる。本拡張は cookie 経路を撤廃済みのため常に body を要求する。
+    'X-Token-Delivery': 'body',
     ...(options.headers ?? {}),
   };
   if (options.body !== undefined && headers['Content-Type'] === undefined) {
     headers['Content-Type'] = 'application/json';
-  }
-  if (options.cookieHeader) {
-    // chrome.runtime fetch does not auto-attach refresh_token cookie because the request
-    // origin is `chrome-extension://<id>`. The background worker injects it manually.
-    headers['Cookie'] = options.cookieHeader;
   }
   if (options.bearerToken) {
     headers['Authorization'] = `Bearer ${options.bearerToken}`;
@@ -46,7 +43,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       method: options.method ?? 'GET',
       headers,
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-      credentials: 'include',
+      // body-mode では refresh_token を JSON body で授受するため cookie 不要。
+      // 旧 cookie-mode の残存 cookie が同行することによる transport 混在を避けるため omit。
+      credentials: 'omit',
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Network request failed';
@@ -77,20 +76,27 @@ export async function login(payload: LoginRequest): Promise<LoginResponse> {
 }
 
 export interface RefreshOptions {
-  cookieHeader?: string;
+  refreshToken: string | null;
 }
 
-export async function refresh(options: RefreshOptions = {}): Promise<TokenResponse> {
+export async function refresh(options: RefreshOptions): Promise<TokenResponse> {
+  if (!options.refreshToken) {
+    // body-mode では refresh_token を必ず body に詰める必要がある。storage に無ければ
+    // family は既に失効していると見なし、cookie フォールバックは持たない。
+    throw new AuthCoreApiError(401, AuthErrorCode.TOKEN_REVOKED, 'No refresh token available');
+  }
   return request<TokenResponse>('/v1/auth/refresh', {
     method: 'POST',
-    cookieHeader: options.cookieHeader,
+    body: { refresh_token: options.refreshToken },
   });
 }
 
-export async function logout(options: RefreshOptions = {}): Promise<void> {
+export async function logout(options: RefreshOptions): Promise<void> {
+  // refresh_token が無い場合でもサーバ側は idempotent に 200 を返す。
+  const body = options.refreshToken ? { refresh_token: options.refreshToken } : {};
   await request<unknown>('/v1/auth/logout', {
     method: 'POST',
-    cookieHeader: options.cookieHeader,
+    body,
   });
 }
 
@@ -132,7 +138,9 @@ export async function fetchWithAccessToken(
       method: init?.method ?? 'GET',
       headers,
       body: init?.body,
-      credentials: 'include',
+      // body-mode では refresh_token を JSON body で授受するため cookie 不要。
+      // 旧 cookie-mode の残存 cookie が同行することによる transport 混在を避けるため omit。
+      credentials: 'omit',
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Network request failed';

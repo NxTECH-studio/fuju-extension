@@ -94,7 +94,7 @@ src/
     auth/MfaForm.tsx       TOTP 6 桁コード入力 UI（キャンセルボタン付き）
     auth/Dashboard.tsx     ログイン済みユーザーの表示、ログアウト、X / Google との連携ボタン
   shared/
-    config.ts            AUTHCORE_BASE_URL（VITE_AUTHCORE_BASE_URL から読込）と Cookie 定数
+    config.ts            AUTHCORE_BASE_URL（VITE_AUTHCORE_BASE_URL から読込）
     auth/
       types.ts           User / TokenResponse / PreTokenResponse / MfaChallenge などの型
       errors.ts          AuthErrorCode 定数 と AuthCoreApiError クラス
@@ -122,8 +122,7 @@ popup.html               popup の Vite エントリ
 | `AuthMessageType.GET_STATE`                 | `AUTH_GET_STATE`            | 現在の `AuthState`（`user` / `isAuthenticated`）を取得                           |
 | `AuthMessageType.REFRESH`                   | `AUTH_REFRESH`              | 即時リフレッシュをトリガ                                                         |
 | `AuthMessageType.FETCH`                     | `AUTH_FETCH`                | access token を付けた認証付き fetch を background 経由で実行                     |
-| `AuthMessageType.PROVIDER_GET_CONNECT_URL`  | `PROVIDER_GET_CONNECT_URL`  | 背景で `/v1/auth/connect/{provider}` の authorize URL を取得                     |
-| `AuthMessageType.PROVIDER_COMPLETE_CONNECT` | `PROVIDER_COMPLETE_CONNECT` | `launchWebAuthFlow` から得た code/state で `/v1/auth/callback/{provider}` を完了 |
+| `AuthMessageType.PROVIDER_GET_CONNECT_URL`  | `PROVIDER_GET_CONNECT_URL`  | Bearer + `final_redirect` で `/v1/auth/connect/{provider}` の JSON から authorize URL を取得（body-mode） |
 
 レスポンスは `AuthResponse<T> = { ok: true; data: T } | { ok: false; error: AuthErrorPayload }`。
 
@@ -148,11 +147,13 @@ content script はこのチャネルでは認証要求を発行しません。
   `MFA_NOT_PENDING` を返し、popup は `LoginForm` に戻します
   （`docs/tasks/support-mfa-login.md` の方針に準拠）。
 - **refresh token の取り扱い**:
-  AuthCore は `Path=/v1/auth` の HttpOnly Cookie で refresh token を配送します。
-  background は `chrome.cookies.get` で読み出して `chrome.storage.local` に
-  バックアップし (`auth-manager.ts` の `readRefreshCookie` / `setRefreshToken`)、
-  `chrome.cookies` から取得できないケース（MV3 の worker ライフサイクル）でも
-  リフレッシュを継続できるようにします。Cookie が読めない場合は warn 出力のみ。
+  本拡張は AuthCore に対し `X-Token-Delivery: body` を付けて全認証エンドポイントを
+  呼び出し、`refresh_token` を JSON body で授受する body-mode で動作します
+  (`src/shared/auth/client.ts`)。受信した `refresh_token` は login / refresh /
+  mfa-verify の各レスポンス body から `chrome.storage.local` に保存されます
+  (`auth-manager.ts` の `persistTokenResponse`)。`chrome.cookies` への依存は
+  撤廃済み（移行用に Phase 3 の `onInstalled('update')` で legacy cookie を
+  一度だけ削除する用途のみ残置）。
 - **Refresh の並行発火制御**:
   AuthCore の Refresh Token Rotation は同一 family で有効な refresh は 1 本のみ。
   複数発火すると再利用検知で family 全体が無効化されるため、`refreshInflight`
@@ -213,6 +214,16 @@ content script はこのチャネルでは認証要求を発行しません。
   （`docs/tasks/support-mfa-login.md` 「対象外」参照）。
 - **content script のログ出力**:
   `console.log` が複数残っており、production でも出力されます。
+- **`chrome.cookies` permission の残置**:
+  認証フローは body-mode 化により cookie に依存しませんが、`onInstalled('update')`
+  での legacy cookie 削除コードのために `manifest.json` の `cookies` permission を
+  当面残しています。移行が完了した後続バージョンで削除する想定です
+  （`docs/tasks/support-extension-bearer-only-flow.md` Phase 3）。
+- **`EXTENSION_REDIRECT_ALLOW_LIST` の登録運用**:
+  provider 連携の `final_redirect=https://<extension-id>.chromiumapp.org/cb` は
+  AuthCore 側の `EXTENSION_REDIRECT_ALLOW_LIST` で完全一致検証されるため、
+  拡張機能 ID を確定させた上でサーバ側に登録する運用が必要です。未登録だと
+  link フローが 400 で失敗します。
 
 ## 関連ドキュメント
 
