@@ -62,14 +62,6 @@ export async function setTokens(snapshot: AuthTokenSnapshot): Promise<void> {
   await getLocal().set(payload);
 }
 
-export async function setRefreshToken(refreshToken: string | null): Promise<void> {
-  if (refreshToken) {
-    await getLocal().set({ [STORAGE_KEYS.refreshToken]: refreshToken });
-  } else {
-    await getLocal().remove(STORAGE_KEYS.refreshToken);
-  }
-}
-
 export async function setUser(user: User | null): Promise<void> {
   if (user) {
     await getLocal().set({ [STORAGE_KEYS.user]: user });

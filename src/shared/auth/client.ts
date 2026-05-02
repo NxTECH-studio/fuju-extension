@@ -43,7 +43,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       method: options.method ?? 'GET',
       headers,
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-      credentials: 'include',
+      // body-mode では refresh_token を JSON body で授受するため cookie 不要。
+      // 旧 cookie-mode の残存 cookie が同行することによる transport 混在を避けるため omit。
+      credentials: 'omit',
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Network request failed';
@@ -136,7 +138,9 @@ export async function fetchWithAccessToken(
       method: init?.method ?? 'GET',
       headers,
       body: init?.body,
-      credentials: 'include',
+      // body-mode では refresh_token を JSON body で授受するため cookie 不要。
+      // 旧 cookie-mode の残存 cookie が同行することによる transport 混在を避けるため omit。
+      credentials: 'omit',
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Network request failed';

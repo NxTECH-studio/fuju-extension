@@ -55,25 +55,23 @@ function launchWebAuthFlow(url: string): Promise<string> {
   });
 }
 
-function extractLinkResult(redirectUrl: string): { provider: string; providerUserId: string } {
+function assertLinkSucceeded(redirectUrl: string): void {
   // body-mode の link フローでは AuthCore が
   // `https://<extension-id>.chromiumapp.org/cb#linked=1&provider=...&provider_user_id=...`
   // 形式の fragment にリンク結果を乗せて返す。エラー時は `#error=...` が乗る。
+  // 本拡張は connect クリック時の provider と発火元から成功表示を組み立てるため、
+  // fragment の値は検証だけ行い破棄する。
   const url = new URL(redirectUrl);
   const fragment = new URLSearchParams(url.hash.replace(/^#/, ''));
-  const linked = fragment.get('linked');
-  if (linked !== '1') {
+  if (fragment.get('linked') !== '1') {
     const errorCode = fragment.get('error');
     throw new Error(
       errorCode ? `Provider link failed: ${errorCode}` : 'Provider link did not complete',
     );
   }
-  const provider = fragment.get('provider');
-  const providerUserId = fragment.get('provider_user_id');
-  if (!provider || !providerUserId) {
+  if (!fragment.get('provider') || !fragment.get('provider_user_id')) {
     throw new Error('Authorization callback fragment is missing provider info');
   }
-  return { provider, providerUserId };
 }
 
 function providerLabel(provider: Provider): string {
@@ -132,7 +130,7 @@ export function Dashboard() {
       }
 
       try {
-        extractLinkResult(redirectUrl);
+        assertLinkSucceeded(redirectUrl);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid authorization callback';
         setLinkError(message);
