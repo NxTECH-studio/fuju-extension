@@ -8,7 +8,6 @@ import type {
   GetStateResponseData,
   LoginResponseData,
   MfaVerifyResponseData,
-  ProviderCompleteConnectResponseData,
   ProviderGetConnectUrlResponseData,
 } from '../shared/auth/messages';
 import * as authManager from './auth-manager';
@@ -65,15 +64,6 @@ async function dispatch(message: AuthMessage): Promise<AuthResponse<unknown>> {
         const data: ProviderGetConnectUrlResponseData = await providerManager.handleGetConnectUrl(
           message.payload.provider,
         );
-        return { ok: true, data };
-      }
-      case AuthMessageType.PROVIDER_COMPLETE_CONNECT: {
-        const data: ProviderCompleteConnectResponseData =
-          await providerManager.handleCompleteConnect(
-            message.payload.provider,
-            message.payload.code,
-            message.payload.state,
-          );
         return { ok: true, data };
       }
       default: {
