@@ -46,6 +46,11 @@ export async function getAuthState(): Promise<PersistedAuthState> {
   };
 }
 
+export async function getRefreshToken(): Promise<string | null> {
+  const state = await getAuthState();
+  return state.refreshToken;
+}
+
 export async function setTokens(snapshot: AuthTokenSnapshot): Promise<void> {
   const payload: RawStorage = {
     [STORAGE_KEYS.accessToken]: snapshot.accessToken,
