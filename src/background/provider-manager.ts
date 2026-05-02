@@ -1,27 +1,18 @@
-import { completeConnectCallback, getConnectAuthorizeUrl } from '../shared/auth/providers';
+import { getConnectAuthorizeUrl } from '../shared/auth/providers';
 import type { Provider } from '../shared/auth/providers';
 import { ensureAccessToken } from './auth-manager';
 
 /**
  * `/v1/auth/connect/{provider}` の authorize URL を取得して popup に返す。
  * popup 側はこの URL を `chrome.identity.launchWebAuthFlow` に渡す。
+ *
+ * `final_redirect` は拡張機能 ID 由来の `chrome.identity.getRedirectURL('cb')` を
+ * background 側で生成する。AuthCore の `EXTENSION_REDIRECT_ALLOW_LIST` に登録された
+ * URL と完全一致する必要がある。
  */
 export async function handleGetConnectUrl(provider: Provider): Promise<{ authorizeUrl: string }> {
   const accessToken = await ensureAccessToken();
-  const authorizeUrl = await getConnectAuthorizeUrl(accessToken, provider);
+  const finalRedirect = chrome.identity.getRedirectURL('cb');
+  const authorizeUrl = await getConnectAuthorizeUrl(accessToken, provider, finalRedirect);
   return { authorizeUrl };
-}
-
-/**
- * `launchWebAuthFlow` の終了 URL から popup が抽出した `code` / `state` を受け取り、
- * AuthCore の callback エンドポイントを叩いて provider 連携を完了させる。
- */
-export async function handleCompleteConnect(
-  provider: Provider,
-  code: string,
-  state: string,
-): Promise<{ provider: Provider }> {
-  const accessToken = await ensureAccessToken();
-  await completeConnectCallback(accessToken, provider, code, state);
-  return { provider };
 }
