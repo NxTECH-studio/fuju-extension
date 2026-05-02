@@ -10,6 +10,7 @@ export const AuthMessageType = {
   REFRESH: 'AUTH_REFRESH',
   FETCH: 'AUTH_FETCH',
   PROVIDER_GET_CONNECT_URL: 'PROVIDER_GET_CONNECT_URL',
+  FUJU_USER_LOOKUP: 'FUJU_USER_LOOKUP',
 } as const;
 
 export type AuthMessageType = (typeof AuthMessageType)[keyof typeof AuthMessageType];
@@ -33,6 +34,11 @@ export interface ProviderGetConnectUrlPayload {
   provider: Provider;
 }
 
+export interface FujuUserLookupPayload {
+  // X handle (screen name). サーバー側で normalize されるため、`@` 付きや URL でも可。
+  userId: string;
+}
+
 export type AuthMessage =
   | { type: typeof AuthMessageType.LOGIN; payload: LoginRequest }
   | { type: typeof AuthMessageType.MFA_VERIFY; payload: MfaVerifyRequest }
@@ -44,6 +50,10 @@ export type AuthMessage =
   | {
       type: typeof AuthMessageType.PROVIDER_GET_CONNECT_URL;
       payload: ProviderGetConnectUrlPayload;
+    }
+  | {
+      type: typeof AuthMessageType.FUJU_USER_LOOKUP;
+      payload: FujuUserLookupPayload;
     };
 
 export interface AuthErrorPayload {
@@ -67,6 +77,10 @@ export type GetStateResponseData = AuthState;
 export type FetchResponseData = AuthFetchResult;
 
 export type ProviderGetConnectUrlResponseData = { authorizeUrl: string };
+
+// `null` は「結果不明」(未ログイン or ネットワーク失敗 等)。
+// `{ exists }` は AuthCore が 200 で返したルックアップ結果。
+export type FujuUserLookupResponseData = { exists: boolean } | null;
 
 export function isAuthMessage(value: unknown): value is AuthMessage {
   if (typeof value !== 'object' || value === null) {

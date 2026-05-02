@@ -5,6 +5,7 @@ import type {
   AuthMessage,
   AuthResponse,
   FetchResponseData,
+  FujuUserLookupResponseData,
   GetStateResponseData,
   LoginResponseData,
   MfaVerifyResponseData,
@@ -12,6 +13,7 @@ import type {
 } from '../shared/auth/messages';
 import * as authManager from './auth-manager';
 import * as providerManager from './provider-manager';
+import { lookupFujuUser } from './fuju-lookup';
 
 function toErrorPayload(error: unknown): AuthErrorPayload {
   if (error instanceof AuthCoreApiError) {
@@ -66,6 +68,10 @@ async function dispatch(message: AuthMessage): Promise<AuthResponse<unknown>> {
         );
         return { ok: true, data };
       }
+      case AuthMessageType.FUJU_USER_LOOKUP: {
+        const data: FujuUserLookupResponseData = await lookupFujuUser(message.payload.userId);
+        return { ok: true, data };
+      }
       default: {
         const exhaustive: never = message;
         return {
@@ -82,22 +88,36 @@ async function dispatch(message: AuthMessage): Promise<AuthResponse<unknown>> {
   }
 }
 
-function isTrustedSender(sender: chrome.runtime.MessageSender): boolean {
-  // Only accept messages originating from this extension's own contexts (popup / options /
-  // background). Reject content scripts (sender.tab is set) so web pages cannot drive
-  // login/logout/fetch through the message API.
-  if (sender.id !== chrome.runtime.id) {
-    return false;
-  }
+function isOwnExtension(sender: chrome.runtime.MessageSender): boolean {
+  return sender.id === chrome.runtime.id;
+}
+
+function isPrivilegedContext(sender: chrome.runtime.MessageSender): boolean {
+  // popup / options / background は sender.tab を持たない。
   return sender.tab === undefined;
+}
+
+// 限定的な read-only API は content script からの呼び出しを許可する。
+// これらは accessToken を popup 経由でしか発行できないので、未ログイン時は null が返るだけ。
+const CONTENT_SCRIPT_ALLOWED: ReadonlyArray<AuthMessage['type']> = [
+  AuthMessageType.FUJU_USER_LOOKUP,
+];
+
+function isAcceptedSender(
+  sender: chrome.runtime.MessageSender,
+  type: AuthMessage['type'],
+): boolean {
+  if (!isOwnExtension(sender)) return false;
+  if (isPrivilegedContext(sender)) return true;
+  return CONTENT_SCRIPT_ALLOWED.includes(type);
 }
 
 export function register(): void {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (!isTrustedSender(sender)) {
+    if (!isAuthMessage(message)) {
       return false;
     }
-    if (!isAuthMessage(message)) {
+    if (!isAcceptedSender(sender, message.type)) {
       return false;
     }
     dispatch(message)
