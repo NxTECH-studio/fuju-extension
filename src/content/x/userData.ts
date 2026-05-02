@@ -19,21 +19,20 @@ const setFujuIconLoading = (fujuIcon: HTMLElement): void => {
 };
 
 const insertFujuIcon = (username: Element, result: FujuLookupResult | null): void => {
-  let fujuIcon = getFujuIcon(username);
+  const fujuIcon = getFujuIcon(username);
 
-  // 既存のアイコンがなければ新規作成
+  // 呼び出し元の insertIcon() が必ず先にローディングアイコンを挿入する前提
   if (!fujuIcon) {
-    fujuIcon = createLoadingIcon();
-    fujuIcon.dataset.inserted = 'true';
-    username.insertBefore(fujuIcon, username.children[1]);
+    return;
   }
 
   // アイコンの状態を更新
   fujuIcon.dataset.loading = 'false';
 
   if (result === null) {
-    // ネットワーク失敗などで結果不明
-    fujuIcon.dataset.fujuUserId = 'null';
+    // API 失敗時の分岐: 現状はローディングアイコンのまま薄く表示する
+    // （将来的に専用エラーアイコンへ差し替える可能性あり）
+    fujuIcon.dataset.fujuUserId = 'error';
     fujuIcon.style.opacity = '0.3';
     return;
   }
