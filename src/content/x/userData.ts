@@ -1,4 +1,6 @@
 import { createLoadingIcon } from '../img/loadingIcon';
+import { createRegisteredIcon } from '../img/registeredIcon';
+import { createUnregisteredIcon } from '../img/unregisteredIcon';
 import { fujuData } from '../api/fujuUserCache';
 import type { FujuLookupResult } from '../api/fujuUserCache';
 
@@ -12,19 +14,21 @@ const getFujuIcon = (username: Element): HTMLElement | null => {
   ) as HTMLElement | null;
 };
 
-const updateFujuIcon = (fujuIcon: HTMLElement, result: FujuLookupResult | null): void => {
-  fujuIcon.dataset.loading = 'false';
-
+const replaceFujuIcon = (oldIcon: HTMLElement, result: FujuLookupResult | null): void => {
   if (result === null) {
-    // API 失敗時は既存仕様どおり薄く表示する。
+    // API 失敗時は loading アイコンのまま薄く表示する。
     // 将来的に専用エラーアイコンへ差し替える可能性あり。
-    fujuIcon.dataset.fujuUserId = 'error';
-    fujuIcon.style.opacity = '0.3';
+    oldIcon.dataset.loading = 'false';
+    oldIcon.dataset.fujuUserId = 'error';
+    oldIcon.style.opacity = '0.3';
     return;
   }
 
-  fujuIcon.dataset.fujuUserId = result.exists ? 'true' : 'false';
-  fujuIcon.style.opacity = result.exists ? '1' : '0.3';
+  const newIcon = result.exists ? createRegisteredIcon() : createUnregisteredIcon();
+  newIcon.dataset.inserted = 'true';
+  newIcon.dataset.loading = 'false';
+  newIcon.dataset.fujuUserId = result.exists ? 'true' : 'false';
+  oldIcon.replaceWith(newIcon);
 };
 
 const insertIcon = async (username: Element) => {
@@ -53,7 +57,7 @@ const insertIcon = async (username: Element) => {
   username.insertBefore(fujuIcon, anchor);
 
   const result = await fujuData(userId);
-  updateFujuIcon(fujuIcon, result);
+  replaceFujuIcon(fujuIcon, result);
 };
 
 const processTweetElement = async (elem: Element): Promise<void> => {
