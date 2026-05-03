@@ -1,54 +1,45 @@
 import processTweetElement from './userData';
 
-const x = () => {
-  // ツイート要素を取得する関数
-  const getTweetElements = async () => {
-    const elems = document.querySelectorAll('[data-testId="tweet"]');
-    console.log(`ツイート数: ${elems.length}`);
+const TWEET_SELECTOR = '[data-testid="tweet"]';
 
+const x = () => {
+  const scanTweets = () => {
+    const elems = document.querySelectorAll(TWEET_SELECTOR);
     for (const elem of elems) {
-      await processTweetElement(elem);
+      void processTweetElement(elem);
     }
-    return elems;
   };
 
-  // 初期取得
-  getTweetElements();
+  scanTweets();
 
-  // DOM変更を監視するMutationObserverを設定
-  const observer = new MutationObserver((mutations) => {
-    // 変更が検出されたら新しいツイート要素を取得
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'childList') {
-        console.log('DOM変更を検出しました');
-        getTweetElements();
-      }
+  let scheduled = false;
+  const observer = new MutationObserver(() => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      scanTweets();
     });
   });
 
-  // observerの設定
-  const config = {
-    childList: true, // 子要素の追加/削除を監視
-    subtree: true, // 全ての子孫要素の変更を監視
-    attributes: true, // 属性変更は監視しない
+  const config: MutationObserverInit = {
+    childList: true,
+    subtree: true,
   };
 
-  // document.bodyの変更を監視開始
-  if (document.body) {
+  const start = () => {
     observer.observe(document.body, config);
-    console.log('ツイート要素の監視を開始しました');
+    console.log('[fuju] ツイート要素の監視を開始しました');
+  };
+
+  if (document.body) {
+    start();
   } else {
-    // bodyが未作成の場合、DOMContentLoadedで実行
-    globalThis.addEventListener('DOMContentLoaded', () => {
-      observer.observe(document.body, config);
-      console.log('ツイート要素の監視を開始しました');
-    });
+    globalThis.addEventListener('DOMContentLoaded', start, { once: true });
   }
 
-  // クリーンアップ関数を返す（必要に応じて監視を停止）
   return () => {
     observer.disconnect();
-    console.log('ツイート要素の監視を停止しました');
   };
 };
 
