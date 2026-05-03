@@ -23,6 +23,7 @@ export function createLoadingIcon(): HTMLDivElement {
   const newDiv = document.createElement('div');
   newDiv.style.height = '1em';
   newDiv.style.width = '1em';
+  newDiv.style.minWidth = '1em';
   newDiv.style.display = 'flex';
   newDiv.style.alignItems = 'center';
   newDiv.style.justifyContent = 'center';
