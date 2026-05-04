@@ -6,8 +6,12 @@ import { AuthCoreApiError, AuthErrorCode, isAuthCoreError } from './errors';
  *
  * - `'x'`  — X (旧 Twitter)。AuthCore 仕様上 `SOCIAL_LINK_ONLY`、link 専用。
  * - `'google'` — Google。本拡張では link 動線のみを扱う。
+ * - `'youtube'` — YouTube。所有チャンネル単位で連携。1 link 操作 = 1 channel。
+ *   `provider_user_id` には YouTube channel ID (`UC...`) が乗る。
+ *   所有検証は AuthCore 側が `youtube/v3/channels?mine=true` で行うため、
+ *   拡張機能側からは X / Google と完全に同じ link 動線で扱える。
  */
-export type Provider = 'x' | 'google';
+export type Provider = 'x' | 'google' | 'youtube';
 
 export interface ConnectAuthorizeResponse {
   authorize_url: string;

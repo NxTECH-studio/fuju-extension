@@ -44,6 +44,29 @@ export interface AuthCoreError {
   message: string;
 }
 
+/**
+ * AuthCore `GET /v1/user/social-accounts` が返す連携済み social account 1 件分。
+ *
+ * - `provider_user_id` は provider ごとに意味が変わる:
+ *   - `'x'` — X user ID。
+ *   - `'google'` — Google subject ID。
+ *   - `'youtube'` — YouTube channel ID (`UC...`)。
+ * - `display_name` は AuthCore 側 migration で追加された列で、provider ごとに以下を保存:
+ *   - `'youtube'` — `youtube/v3/channels` `snippet.title`（チャンネル名）。
+ *   - 他 provider — provider ごとの表示名。空の場合は空文字列が返る想定。
+ *
+ * AuthCore 側のレスポンス形が確定し次第、必要なら本型を上書きする。
+ */
+export interface SocialAccount {
+  provider: 'x' | 'google' | 'youtube';
+  provider_user_id: string;
+  display_name: string;
+}
+
+export interface SocialAccountsResponse {
+  accounts: SocialAccount[];
+}
+
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;

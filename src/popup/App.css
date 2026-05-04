@@ -319,3 +319,36 @@
   flex-direction: column;
   gap: 8px;
 }
+
+.auth-social-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  h2 {
+    font-size: 14px;
+    margin: 0;
+    color: var(--text-h, inherit);
+  }
+}
+
+.auth-social-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+
+  li {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border, #ccc);
+    background: var(--input-bg, transparent);
+  }
+}
+
+.auth-social-name {
+  word-break: break-all;
+}
