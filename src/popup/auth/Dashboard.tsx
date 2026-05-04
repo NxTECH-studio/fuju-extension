@@ -41,9 +41,16 @@ function sendMessage<T>(message: unknown): Promise<AuthResponse<T>> {
 }
 
 function launchWebAuthFlow(url: string): Promise<string> {
+  console.log('[diag] launchWebAuthFlow start, url =', url);
   return new Promise((resolve, reject) => {
     chrome.identity.launchWebAuthFlow({ url, interactive: true }, (redirectUrl) => {
       const lastError = chrome.runtime.lastError;
+      console.log(
+        '[diag] launchWebAuthFlow returned. lastError =',
+        lastError?.message,
+        'redirectUrl =',
+        redirectUrl,
+      );
       if (lastError) {
         reject(new Error(lastError.message ?? 'launchWebAuthFlow failed'));
         return;
@@ -120,16 +127,18 @@ export function Dashboard() {
   const fetchSocialAccounts = useCallback(async () => {
     setSocialAccountsLoading(true);
     setSocialAccountsError(null);
-    const response = await sendMessage<ProviderGetSocialAccountsResponseData>({
-      type: AuthMessageType.PROVIDER_GET_SOCIAL_ACCOUNTS,
-    });
-    if (!response.ok) {
-      setSocialAccountsError(formatLinkError(response.error));
+    try {
+      const response = await sendMessage<ProviderGetSocialAccountsResponseData>({
+        type: AuthMessageType.PROVIDER_GET_SOCIAL_ACCOUNTS,
+      });
+      if (!response.ok) {
+        setSocialAccountsError(formatLinkError(response.error));
+        return;
+      }
+      setSocialAccounts(response.data.accounts);
+    } finally {
       setSocialAccountsLoading(false);
-      return;
     }
-    setSocialAccounts(response.data.accounts);
-    setSocialAccountsLoading(false);
   }, []);
 
   useEffect(() => {
