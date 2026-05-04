@@ -41,16 +41,9 @@ function sendMessage<T>(message: unknown): Promise<AuthResponse<T>> {
 }
 
 function launchWebAuthFlow(url: string): Promise<string> {
-  console.log('[diag] launchWebAuthFlow start, url =', url);
   return new Promise((resolve, reject) => {
     chrome.identity.launchWebAuthFlow({ url, interactive: true }, (redirectUrl) => {
       const lastError = chrome.runtime.lastError;
-      console.log(
-        '[diag] launchWebAuthFlow returned. lastError =',
-        lastError?.message,
-        'redirectUrl =',
-        redirectUrl,
-      );
       if (lastError) {
         reject(new Error(lastError.message ?? 'launchWebAuthFlow failed'));
         return;
