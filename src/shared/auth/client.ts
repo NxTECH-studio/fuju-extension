@@ -1,6 +1,13 @@
 import { AUTHCORE_BASE_URL } from '../config';
 import { AuthCoreApiError, AuthErrorCode, isAuthCoreError } from './errors';
-import type { LoginRequest, LoginResponse, MfaVerifyRequest, TokenResponse, User } from './types';
+import type {
+  LoginRequest,
+  LoginResponse,
+  MfaVerifyRequest,
+  SocialAccountsResponse,
+  TokenResponse,
+  User,
+} from './types';
 
 interface RequestOptions {
   method?: string;
@@ -102,6 +109,19 @@ export async function logout(options: RefreshOptions): Promise<void> {
 
 export async function getProfile(accessToken: string): Promise<User> {
   return request<User>('/v1/user/profile', {
+    method: 'GET',
+    bearerToken: accessToken,
+  });
+}
+
+/**
+ * AuthCore `GET /v1/user/social-accounts` を叩き、連携済み social account 一覧を取得する。
+ *
+ * AuthCore 側が `display_name` 列を含めて返す（migration 後）。レスポンス形は
+ * `SocialAccountsResponse` を参照。
+ */
+export async function getSocialAccounts(accessToken: string): Promise<SocialAccountsResponse> {
+  return request<SocialAccountsResponse>('/v1/user/social-accounts', {
     method: 'GET',
     bearerToken: accessToken,
   });

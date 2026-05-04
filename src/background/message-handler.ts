@@ -10,6 +10,7 @@ import type {
   LoginResponseData,
   MfaVerifyResponseData,
   ProviderGetConnectUrlResponseData,
+  ProviderGetSocialAccountsResponseData,
 } from '../shared/auth/messages';
 import * as authManager from './auth-manager';
 import * as providerManager from './provider-manager';
@@ -66,6 +67,11 @@ async function dispatch(message: AuthMessage): Promise<AuthResponse<unknown>> {
         const data: ProviderGetConnectUrlResponseData = await providerManager.handleGetConnectUrl(
           message.payload.provider,
         );
+        return { ok: true, data };
+      }
+      case AuthMessageType.PROVIDER_GET_SOCIAL_ACCOUNTS: {
+        const data: ProviderGetSocialAccountsResponseData =
+          await providerManager.handleGetSocialAccounts();
         return { ok: true, data };
       }
       case AuthMessageType.FUJU_USER_LOOKUP: {

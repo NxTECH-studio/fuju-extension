@@ -1,12 +1,14 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AuthErrorCode } from '../../shared/auth/errors';
 import { AuthMessageType } from '../../shared/auth/messages';
 import type {
   AuthErrorPayload,
   AuthResponse,
   ProviderGetConnectUrlResponseData,
+  ProviderGetSocialAccountsResponseData,
 } from '../../shared/auth/messages';
 import type { Provider } from '../../shared/auth/providers';
+import type { SocialAccount } from '../../shared/auth/types';
 import { useAuth } from './useAuth';
 
 function sendMessage<T>(message: unknown): Promise<AuthResponse<T>> {
@@ -80,6 +82,8 @@ function providerLabel(provider: Provider): string {
       return 'X';
     case 'google':
       return 'Google';
+    case 'youtube':
+      return 'YouTube';
     default:
       return provider;
   }
@@ -95,6 +99,10 @@ function formatLinkError(error: AuthErrorPayload): string {
     case AuthErrorCode.TOKEN_INVALID:
     case AuthErrorCode.TOKEN_REVOKED:
       return 'セッションが切れました。再度ログインしてください。';
+    case AuthErrorCode.SOCIAL_ALREADY_LINKED:
+      return 'このチャンネルは既に連携済みです。';
+    case AuthErrorCode.SOCIAL_ALREADY_LINKED_TO_OTHER_USER:
+      return 'このチャンネルは別の Fuju アカウントに連携されています。';
     default:
       return error.message || '連携に失敗しました。';
   }
@@ -105,45 +113,77 @@ export function Dashboard() {
   const [linkingProvider, setLinkingProvider] = useState<Provider | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [linkSuccess, setLinkSuccess] = useState<string | null>(null);
+  const [socialAccounts, setSocialAccounts] = useState<SocialAccount[] | null>(null);
+  const [socialAccountsLoading, setSocialAccountsLoading] = useState<boolean>(false);
+  const [socialAccountsError, setSocialAccountsError] = useState<string | null>(null);
 
-  const handleConnect = useCallback(async (provider: Provider) => {
-    setLinkingProvider(provider);
-    setLinkError(null);
-    setLinkSuccess(null);
+  const fetchSocialAccounts = useCallback(async () => {
+    setSocialAccountsLoading(true);
+    setSocialAccountsError(null);
     try {
-      const urlResponse = await sendMessage<ProviderGetConnectUrlResponseData>({
-        type: AuthMessageType.PROVIDER_GET_CONNECT_URL,
-        payload: { provider },
+      const response = await sendMessage<ProviderGetSocialAccountsResponseData>({
+        type: AuthMessageType.PROVIDER_GET_SOCIAL_ACCOUNTS,
       });
-      if (!urlResponse.ok) {
-        setLinkError(formatLinkError(urlResponse.error));
+      if (!response.ok) {
+        setSocialAccountsError(formatLinkError(response.error));
         return;
       }
-
-      let redirectUrl: string;
-      try {
-        redirectUrl = await launchWebAuthFlow(urlResponse.data.authorizeUrl);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Authorization was cancelled';
-        setLinkError(message);
-        return;
-      }
-
-      try {
-        assertLinkSucceeded(redirectUrl);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid authorization callback';
-        setLinkError(message);
-        return;
-      }
-
-      setLinkSuccess(`${providerLabel(provider)} と連携しました。`);
+      setSocialAccounts(response.data.accounts);
     } finally {
-      setLinkingProvider(null);
+      setSocialAccountsLoading(false);
     }
   }, []);
 
+  useEffect(() => {
+    void fetchSocialAccounts();
+  }, [fetchSocialAccounts]);
+
+  const handleConnect = useCallback(
+    async (provider: Provider) => {
+      setLinkingProvider(provider);
+      setLinkError(null);
+      setLinkSuccess(null);
+      try {
+        const urlResponse = await sendMessage<ProviderGetConnectUrlResponseData>({
+          type: AuthMessageType.PROVIDER_GET_CONNECT_URL,
+          payload: { provider },
+        });
+        if (!urlResponse.ok) {
+          setLinkError(formatLinkError(urlResponse.error));
+          return;
+        }
+
+        let redirectUrl: string;
+        try {
+          redirectUrl = await launchWebAuthFlow(urlResponse.data.authorizeUrl);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Authorization was cancelled';
+          setLinkError(message);
+          return;
+        }
+
+        try {
+          assertLinkSucceeded(redirectUrl);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Invalid authorization callback';
+          setLinkError(message);
+          return;
+        }
+
+        setLinkSuccess(`${providerLabel(provider)} と連携しました。`);
+        // 連携成功直後にリストを再取得して表示を即時反映する。
+        void fetchSocialAccounts();
+      } finally {
+        setLinkingProvider(null);
+      }
+    },
+    [fetchSocialAccounts],
+  );
+
   const isBusy = loading || linkingProvider !== null;
+  const youtubeAccounts = socialAccounts
+    ? socialAccounts.filter((account) => account.provider === 'youtube')
+    : null;
 
   return (
     <section className="auth-dashboard">
@@ -177,6 +217,16 @@ export function Dashboard() {
         >
           {linkingProvider === 'google' ? '連携中…' : 'Google と連携'}
         </button>
+        <button
+          type="button"
+          className="auth-secondary"
+          onClick={() => {
+            void handleConnect('youtube');
+          }}
+          disabled={isBusy}
+        >
+          {linkingProvider === 'youtube' ? '連携中…' : 'YouTube と連携'}
+        </button>
       </div>
       {linkError && (
         <p className="auth-error" role="alert">
@@ -188,6 +238,35 @@ export function Dashboard() {
           {linkSuccess}
         </p>
       )}
+      <section className="auth-social-list" aria-label="連携済み YouTube チャンネル">
+        <h2>連携済み YouTube チャンネル</h2>
+        {socialAccountsLoading && <p className="auth-hint">読み込み中…</p>}
+        {!socialAccountsLoading && socialAccountsError && (
+          <p className="auth-error" role="alert">
+            {socialAccountsError}
+          </p>
+        )}
+        {!socialAccountsLoading &&
+          !socialAccountsError &&
+          youtubeAccounts &&
+          youtubeAccounts.length === 0 && (
+            <p className="auth-hint">連携済みの YouTube チャンネルはありません。</p>
+          )}
+        {!socialAccountsLoading &&
+          !socialAccountsError &&
+          youtubeAccounts &&
+          youtubeAccounts.length > 0 && (
+            <ul className="auth-social-items">
+              {youtubeAccounts.map((account) => (
+                <li key={account.provider_user_id}>
+                  <span className="auth-social-name">
+                    {account.display_name || account.provider_user_id}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+      </section>
       <button
         type="button"
         className="auth-submit"

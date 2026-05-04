@@ -1,4 +1,11 @@
-import type { AuthState, LoginRequest, MfaChallenge, MfaVerifyRequest, User } from './types';
+import type {
+  AuthState,
+  LoginRequest,
+  MfaChallenge,
+  MfaVerifyRequest,
+  SocialAccount,
+  User,
+} from './types';
 import type { Provider } from './providers';
 
 export const AuthMessageType = {
@@ -10,6 +17,7 @@ export const AuthMessageType = {
   REFRESH: 'AUTH_REFRESH',
   FETCH: 'AUTH_FETCH',
   PROVIDER_GET_CONNECT_URL: 'PROVIDER_GET_CONNECT_URL',
+  PROVIDER_GET_SOCIAL_ACCOUNTS: 'PROVIDER_GET_SOCIAL_ACCOUNTS',
   FUJU_USER_LOOKUP: 'FUJU_USER_LOOKUP',
 } as const;
 
@@ -51,6 +59,7 @@ export type AuthMessage =
       type: typeof AuthMessageType.PROVIDER_GET_CONNECT_URL;
       payload: ProviderGetConnectUrlPayload;
     }
+  | { type: typeof AuthMessageType.PROVIDER_GET_SOCIAL_ACCOUNTS }
   | {
       type: typeof AuthMessageType.FUJU_USER_LOOKUP;
       payload: FujuUserLookupPayload;
@@ -77,6 +86,8 @@ export type GetStateResponseData = AuthState;
 export type FetchResponseData = AuthFetchResult;
 
 export type ProviderGetConnectUrlResponseData = { authorizeUrl: string };
+
+export type ProviderGetSocialAccountsResponseData = { accounts: SocialAccount[] };
 
 // `null` は「結果不明」(未ログイン or ネットワーク失敗 等)。
 // `{ exists }` は AuthCore が 200 で返したルックアップ結果。
