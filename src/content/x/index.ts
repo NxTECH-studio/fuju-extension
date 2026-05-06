@@ -55,5 +55,3 @@ const x = () => {
 };
 
 x();
-
-export default x;

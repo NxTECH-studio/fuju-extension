@@ -1,4 +1,4 @@
-import { buildContentConfig } from './vite.content.config';
+import { buildContentConfig } from './vite.content.shared';
 
 export default buildContentConfig({
   entry: 'src/content/youtube/index.ts',
