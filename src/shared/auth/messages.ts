@@ -7,6 +7,10 @@ import type {
   User,
 } from './types';
 import type { Provider } from './providers';
+import type {
+  TelemetrySendEventsPayload,
+  TelemetrySendEventsResponseData,
+} from '../telemetry/types';
 
 export const AuthMessageType = {
   LOGIN: 'AUTH_LOGIN',
@@ -19,6 +23,7 @@ export const AuthMessageType = {
   PROVIDER_GET_CONNECT_URL: 'PROVIDER_GET_CONNECT_URL',
   PROVIDER_GET_SOCIAL_ACCOUNTS: 'PROVIDER_GET_SOCIAL_ACCOUNTS',
   FUJU_USER_LOOKUP: 'FUJU_USER_LOOKUP',
+  TELEMETRY_SEND_EVENTS: 'TELEMETRY_SEND_EVENTS',
 } as const;
 
 export type AuthMessageType = (typeof AuthMessageType)[keyof typeof AuthMessageType];
@@ -63,6 +68,10 @@ export type AuthMessage =
   | {
       type: typeof AuthMessageType.FUJU_USER_LOOKUP;
       payload: FujuUserLookupPayload;
+    }
+  | {
+      type: typeof AuthMessageType.TELEMETRY_SEND_EVENTS;
+      payload: TelemetrySendEventsPayload;
     };
 
 export interface AuthErrorPayload {
@@ -92,6 +101,9 @@ export type ProviderGetSocialAccountsResponseData = { accounts: SocialAccount[] 
 // `null` は「結果不明」(未ログイン or ネットワーク失敗 等)。
 // `{ exists }` は AuthCore が 200 で返したルックアップ結果。
 export type FujuUserLookupResponseData = { exists: boolean } | null;
+
+// re-export so handler / sender が ../telemetry/types を直接 import しなくても済む。
+export type { TelemetrySendEventsPayload, TelemetrySendEventsResponseData };
 
 export function isAuthMessage(value: unknown): value is AuthMessage {
   if (typeof value !== 'object' || value === null) {
