@@ -47,12 +47,9 @@ jobs:
           tag_name: ${{ needs.release-please.outputs.tag_name }}
           files: fuju-extension-${{ needs.release-please.outputs.tag_name }}.zip
 
-      # Chrome Web Store API への自動 publish。secrets が未設定だと step 単独で
-      # 失敗するが、ここまでの GitHub Release / zip 添付は完了済みなので手動
-      # アップロードへのフォールバックは可能。secrets セットアップ手順は
-      # docs/release.md を参照。
+      # secrets セットアップと未設定時の手動 fallback は docs/release.md を参照。
       - name: Publish to Chrome Web Store
-        uses: mnao305/chrome-extension-upload@v5.0.0
+        uses: mnao305/chrome-extension-upload@v6.0.0
         with:
           file-path: fuju-extension-${{ needs.release-please.outputs.tag_name }}.zip
           extension-id: ${{ secrets.CHROME_EXTENSION_ID }}

@@ -62,12 +62,15 @@ CI が Web Store にアップロードするには以下 4 つの GitHub Actions
 ### refresh token の発行手順 (初回のみ)
 
 1. Google Cloud Console で **Chrome Web Store API** を有効化する
-2. OAuth 2.0 client (Web application) を作成し、redirect URI に `https://developers.google.com/oauthplayground` を追加する
-3. [OAuth 2.0 Playground](https://developers.google.com/oauthplayground/) を開く
-4. 右上歯車 → "Use your own OAuth credentials" にチェックを入れ、step 2 の client_id / client_secret を入力
-5. 左ペインで scope `https://www.googleapis.com/auth/chromewebstore` を入力 → "Authorize APIs"
-6. Web Store Developer Dashboard を所有する Google アカウントでログインを許可する
-7. "Exchange authorization code for tokens" をクリックすると `refresh_token` が表示される
+2. **OAuth 同意画面 (consent screen)** を構成する (新規 GCP プロジェクトでは必須)
+   - User Type: External (拡張機能 owner の Google アカウントのみで使うので、Test users に owner アドレスを追加すれば publish 状態にする必要はない)
+   - Scope に `https://www.googleapis.com/auth/chromewebstore` を追加
+3. OAuth 2.0 client (Web application) を作成し、redirect URI に `https://developers.google.com/oauthplayground` を追加する
+4. [OAuth 2.0 Playground](https://developers.google.com/oauthplayground/) を開く
+5. 右上歯車 → "Use your own OAuth credentials" にチェックを入れ、step 3 の client_id / client_secret を入力
+6. 左ペインで scope `https://www.googleapis.com/auth/chromewebstore` を入力 → "Authorize APIs"
+7. Web Store Developer Dashboard を所有する Google アカウントでログインを許可する
+8. "Exchange authorization code for tokens" をクリックすると `refresh_token` が表示される
 
 得られた値を GitHub の `Settings → Secrets and variables → Actions` に登録してください。
 

@@ -35,11 +35,11 @@ service worker handles refresh / logout transparently.
 - `npm run lint` / `npm run lint:fix` — ESLint.
 - `npm run format` — Prettier + ESLint fix.
 
-## Release / Web Store 公開
+## Release / Web Store publishing
 
-`main` へのマージから Chrome Web Store への自動 publish までは
-[`docs/release.md`](./docs/release.md) を参照してください。コミットメッセージ規約
-(Conventional Commits) と GitHub Actions secrets のセットアップ手順をまとめています。
+See [`docs/release.md`](./docs/release.md) for the release flow from `main` merge
+to Chrome Web Store auto-publish, including the Conventional Commits convention
+and GitHub Actions secrets setup.
 
 ## AuthCore integration notes
 

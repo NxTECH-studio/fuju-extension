@@ -14,13 +14,12 @@
 
 <!-- レビュー観点・関連 issue 等。なければ「なし」 -->
 
-## release notes
+## Conventional Commits 確認
 
 <!--
-このリポジトリは Squash and merge 前提です。Squash 後の commit 1 行目は PR タイトル
-になるため、PR タイトル自体が Conventional Commits 規約に従う必要があります。
-release-please は PR タイトルを起点に minor (`feat:`) / patch (`fix:`) を判定します。
-詳細は docs/release.md を参照。
+Squash and merge 前提のため PR タイトルが Squash 後の commit 1 行目になります。
+release-please は PR タイトルの prefix から minor (`feat:`) / patch (`fix:`) を
+判定するので、タイトル自体が規約に従う必要があります。詳細は docs/release.md。
 -->
 
 - [ ] PR タイトルが `feat:` / `fix:` / `chore:` / `refactor:` / `docs:` / `style:` / `test:` / `build:` / `ci:` のいずれかで始まっている
