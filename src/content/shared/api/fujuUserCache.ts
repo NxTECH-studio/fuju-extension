@@ -1,5 +1,5 @@
-import { AuthMessageType } from '../../shared/auth/messages';
-import type { AuthResponse, FujuUserLookupResponseData } from '../../shared/auth/messages';
+import { AuthMessageType } from '../../../shared/auth/messages';
+import type { AuthResponse, FujuUserLookupResponseData } from '../../../shared/auth/messages';
 
 export interface FujuLookupResult {
   exists: boolean;

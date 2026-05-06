@@ -1,8 +1,8 @@
-import { createLoadingIcon } from '../img/loadingIcon';
-import { createRegisteredIcon } from '../img/registeredIcon';
-import { createUnregisteredIcon } from '../img/unregisteredIcon';
-import { fujuData } from '../api/fujuUserCache';
-import type { FujuLookupResult } from '../api/fujuUserCache';
+import { createLoadingIcon } from '../shared/img/loadingIcon';
+import { createRegisteredIcon } from '../shared/img/registeredIcon';
+import { createUnregisteredIcon } from '../shared/img/unregisteredIcon';
+import { fujuData } from '../shared/api/fujuUserCache';
+import type { FujuLookupResult } from '../shared/api/fujuUserCache';
 
 const extractUserId = (href: string): string => {
   return href.split('/').findLast(Boolean) ?? '';

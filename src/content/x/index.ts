@@ -2,6 +2,8 @@ import processTweetElement from './userData';
 import { trackTweet } from './impressionTracker';
 import { extractTweetId } from './tweetId';
 
+console.log('[content/x] loaded on', location.href);
+
 const TWEET_SELECTOR = '[data-testid="tweet"]';
 
 const x = () => {
@@ -52,4 +54,4 @@ const x = () => {
   };
 };
 
-export default x;
+x();

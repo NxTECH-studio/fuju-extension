@@ -1,4 +1,4 @@
-import { enqueueTelemetryEvent } from '../api/telemetryQueue';
+import { enqueueTelemetryEvent } from '../shared/api/telemetryQueue';
 
 // ツイート単位の impression tracker。
 // frontend repo の `useImpressionTracker.ts` をそのまま content script 用に移植。
