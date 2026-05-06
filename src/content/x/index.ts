@@ -1,4 +1,6 @@
 import processTweetElement from './userData';
+import { trackTweet } from './impressionTracker';
+import { extractTweetId } from './tweetId';
 
 const TWEET_SELECTOR = '[data-testid="tweet"]';
 
@@ -7,6 +9,13 @@ const x = () => {
     const elems = document.querySelectorAll(TWEET_SELECTOR);
     for (const elem of elems) {
       void processTweetElement(elem);
+      // impression tracker は WeakSet で重複登録を弾くので、scan 毎に呼んで OK。
+      // tweet ID が抽出できない (= permalink anchor が未レンダー) ノードは
+      // 次回 scan で再評価される。
+      const tweetId = extractTweetId(elem);
+      if (tweetId) {
+        trackTweet(elem, tweetId);
+      }
     }
   };
 

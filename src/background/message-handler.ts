@@ -15,6 +15,8 @@ import type {
 import * as authManager from './auth-manager';
 import * as providerManager from './provider-manager';
 import { lookupFujuUser } from './fuju-lookup';
+import { handleTelemetrySendEvents } from './telemetry';
+import type { TelemetrySendEventsResponseData } from '../shared/auth/messages';
 
 function toErrorPayload(error: unknown): AuthErrorPayload {
   if (error instanceof AuthCoreApiError) {
@@ -78,6 +80,12 @@ async function dispatch(message: AuthMessage): Promise<AuthResponse<unknown>> {
         const data: FujuUserLookupResponseData = await lookupFujuUser(message.payload.userId);
         return { ok: true, data };
       }
+      case AuthMessageType.TELEMETRY_SEND_EVENTS: {
+        const data: TelemetrySendEventsResponseData = await handleTelemetrySendEvents(
+          message.payload.events,
+        );
+        return { ok: true, data };
+      }
       default: {
         const exhaustive: never = message;
         return {
@@ -105,8 +113,11 @@ function isPrivilegedContext(sender: chrome.runtime.MessageSender): boolean {
 
 // 限定的な read-only API は content script からの呼び出しを許可する。
 // これらは accessToken を popup 経由でしか発行できないので、未ログイン時は null が返るだけ。
+// TELEMETRY_SEND_EVENTS は content script から呼び出すために allow-list する。
+// 未認証時は background 側で `dropped: true` を返すだけなので情報漏れは無い。
 const CONTENT_SCRIPT_ALLOWED: ReadonlyArray<AuthMessage['type']> = [
   AuthMessageType.FUJU_USER_LOOKUP,
+  AuthMessageType.TELEMETRY_SEND_EVENTS,
 ];
 
 function isAcceptedSender(
