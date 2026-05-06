@@ -35,6 +35,12 @@ service worker handles refresh / logout transparently.
 - `npm run lint` / `npm run lint:fix` — ESLint.
 - `npm run format` — Prettier + ESLint fix.
 
+## Release / Web Store 公開
+
+`main` へのマージから Chrome Web Store への自動 publish までは
+[`docs/release.md`](./docs/release.md) を参照してください。コミットメッセージ規約
+(Conventional Commits) と GitHub Actions secrets のセットアップ手順をまとめています。
+
 ## AuthCore integration notes
 
 The extension talks to AuthCore over HTTPS (`fetch` with `credentials: 'include'`).
