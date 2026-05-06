@@ -14,8 +14,23 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://x.com/*", "https://*.x.com/*", "https://twitter.com/*", "https://*.twitter.com/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://x.com/*",
+        "https://*.x.com/*",
+        "https://twitter.com/*",
+        "https://*.twitter.com/*"
+      ],
+      "js": ["content-x.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://m.youtube.com/*",
+        "https://youtube.com/*",
+        "https://youtu.be/*"
+      ],
+      "js": ["content-youtube.js"],
       "run_at": "document_idle"
     }
   ],
@@ -24,7 +39,8 @@
     "https://auth.fujupay.app/*",
     "https://emotion-model.fujupay.app/*",
     "https://x.com/*",
-    "https://*.x.com/*"
+    "https://*.x.com/*",
+    "https://*.youtube.com/*"
   ],
   "icons": {
     "16": "logos/16.png",

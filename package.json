@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite build --watch --mode development",
-    "build": "tsc -b && vite build && vite build --config vite.content.config.ts",
+    "build": "tsc -b && vite build && vite build --config vite.content.x.config.ts && vite build --config vite.content.youtube.config.ts",
     "prepare": "husky install",
     "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
     "lint:fix": "eslint \"src/**/*.{js,jsx,ts,tsx}\" --fix",
