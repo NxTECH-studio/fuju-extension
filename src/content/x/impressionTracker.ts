@@ -102,11 +102,7 @@ function onIntersect(entry: IntersectionObserverEntry): void {
         state.phase = 'idle';
       }
     }
-    if (
-      !state.scrollStopFired &&
-      state.scrollStopTimer === null &&
-      state.phase === 'idle'
-    ) {
+    if (!state.scrollStopFired && state.scrollStopTimer === null && state.phase === 'idle') {
       state.phase = 'scroll_stop_pending';
       state.scrollStopTimer = globalThis.setTimeout(() => {
         if (state.phase === 'scroll_stop_pending') {

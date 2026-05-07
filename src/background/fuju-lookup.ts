@@ -24,7 +24,9 @@ export async function lookupFujuUser({
   if (!q) {
     return { exists: false };
   }
-  const path = `/v1/users/lookup?provider=${encodeURIComponent(provider)}&q=${encodeURIComponent(q)}`;
+  const path = `/v1/users/lookup?provider=${encodeURIComponent(provider)}&q=${encodeURIComponent(
+    q,
+  )}`;
   let result: Awaited<ReturnType<typeof authenticatedFetch>>;
   try {
     result = await authenticatedFetch(path);

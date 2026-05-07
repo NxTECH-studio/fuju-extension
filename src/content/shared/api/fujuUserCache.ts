@@ -24,10 +24,7 @@ function makeCacheKey(provider: FujuLookupProvider, q: string): string {
   return `${provider}:${q}`;
 }
 
-function sendLookup(
-  provider: FujuLookupProvider,
-  q: string,
-): Promise<FujuUserLookupResponseData> {
+function sendLookup(provider: FujuLookupProvider, q: string): Promise<FujuUserLookupResponseData> {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(
       { type: AuthMessageType.FUJU_USER_LOOKUP, payload: { provider, q } },

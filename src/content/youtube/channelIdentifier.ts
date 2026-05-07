@@ -111,12 +111,8 @@ function extractFromChannelPage(): ChannelIdentifier | null {
 function extractFromShorts(): ChannelIdentifier | null {
   // shorts overlay の投稿者リンク。複数の DOM 構造をフォールバックする。
   const candidates: (HTMLAnchorElement | null)[] = [
-    document.querySelector<HTMLAnchorElement>(
-      'ytd-reel-player-header-renderer a[href^="/@"]',
-    ),
-    document.querySelector<HTMLAnchorElement>(
-      'ytd-reel-video-renderer ytd-channel-name a',
-    ),
+    document.querySelector<HTMLAnchorElement>('ytd-reel-player-header-renderer a[href^="/@"]'),
+    document.querySelector<HTMLAnchorElement>('ytd-reel-video-renderer ytd-channel-name a'),
     document.querySelector<HTMLAnchorElement>(
       'ytd-reel-player-header-renderer a[href^="/channel/"]',
     ),
