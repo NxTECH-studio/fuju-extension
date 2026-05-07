@@ -115,9 +115,13 @@ function isPrivilegedContext(sender: chrome.runtime.MessageSender): boolean {
 // これらは accessToken を popup 経由でしか発行できないので、未ログイン時は null が返るだけ。
 // TELEMETRY_SEND_EVENTS は content script から呼び出すために allow-list する。
 // 未認証時は background 側で `dropped: true` を返すだけなので情報漏れは無い。
+// GET_STATE は YouTube 側 Fuju ボタンの表示条件評価に使う。返るのは `chrome.storage.local`
+// に既に保存されている AuthState（`isAuthenticated` と `user`）で、content script は
+// `storage` permission 経由でも到達可能な情報なので allow-list しても権限拡張にはならない。
 const CONTENT_SCRIPT_ALLOWED: ReadonlyArray<AuthMessage['type']> = [
   AuthMessageType.FUJU_USER_LOOKUP,
   AuthMessageType.TELEMETRY_SEND_EVENTS,
+  AuthMessageType.GET_STATE,
 ];
 
 function isAcceptedSender(
