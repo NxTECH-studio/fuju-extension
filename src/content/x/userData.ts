@@ -56,7 +56,7 @@ const insertIcon = async (username: Element) => {
   const anchor = username.children[1] ?? null;
   username.insertBefore(fujuIcon, anchor);
 
-  const result = await fujuData(userId);
+  const result = await fujuData('x', userId);
   replaceFujuIcon(fujuIcon, result);
 };
 

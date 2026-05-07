@@ -77,7 +77,7 @@ async function dispatch(message: AuthMessage): Promise<AuthResponse<unknown>> {
         return { ok: true, data };
       }
       case AuthMessageType.FUJU_USER_LOOKUP: {
-        const data: FujuUserLookupResponseData = await lookupFujuUser(message.payload.userId);
+        const data: FujuUserLookupResponseData = await lookupFujuUser(message.payload);
         return { ok: true, data };
       }
       case AuthMessageType.TELEMETRY_SEND_EVENTS: {
