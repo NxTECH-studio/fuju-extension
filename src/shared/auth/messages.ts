@@ -47,9 +47,13 @@ export interface ProviderGetConnectUrlPayload {
   provider: Provider;
 }
 
+// AuthCore `/v1/users/lookup` のクエリ。
+// `provider` は X / YouTube を識別し、`q` はそれぞれ:
+//   - x:       handle / screen name (`@` 付き・生どちらも可。サーバ側で normalize される)。
+//   - youtube: handle (`mrbeast`) または channel ID (`UC…22 文字`)。
 export interface FujuUserLookupPayload {
-  // X handle (screen name). サーバー側で normalize されるため、`@` 付きや URL でも可。
-  userId: string;
+  provider: 'x' | 'youtube';
+  q: string;
 }
 
 export type AuthMessage =

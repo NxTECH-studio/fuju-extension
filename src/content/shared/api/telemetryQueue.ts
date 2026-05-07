@@ -1,12 +1,6 @@
 import { AuthMessageType } from '../../../shared/auth/messages';
-import type {
-  AuthResponse,
-  TelemetrySendEventsResponseData,
-} from '../../../shared/auth/messages';
-import type {
-  ContentTelemetryEvent,
-  FrontendEventType,
-} from '../../../shared/telemetry/types';
+import type { AuthResponse, TelemetrySendEventsResponseData } from '../../../shared/auth/messages';
+import type { ContentTelemetryEvent, FrontendEventType } from '../../../shared/telemetry/types';
 
 // content script 側 telemetry batcher。
 //
