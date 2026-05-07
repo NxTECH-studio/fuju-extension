@@ -1,6 +1,9 @@
 import { fujuData } from '../shared/api/fujuUserCache';
+import type { FujuLookupResult } from '../shared/api/fujuUserCache';
+import { getAuthState, onAuthStateChange } from './authState';
 import { extractCurrentChannel } from './channelIdentifier';
 import type { ChannelIdentifier } from './channelIdentifier';
+import { ensureFujuButton, removeAllFujuButtons } from './fujuButton';
 import { onChannelContextChange } from './navigation';
 
 console.log('[content/youtube] loaded on', location.href);
@@ -26,15 +29,40 @@ const youtube = () => {
   // 進行中の retry を中断するための世代カウンタ。
   let scanGeneration = 0;
 
+  // 表示条件評価用の最新スナップショット。
+  // auth state の変化 / lookup 結果の到着 / SPA 遷移の各タイミングで更新する。
+  let currentAuth = false;
+  let currentQ: string | null = null;
+  let currentLookup: FujuLookupResult | null = null;
+
+  const evaluateAndApply = (): void => {
+    const shouldShow = currentAuth && currentLookup?.exists === true;
+    ensureFujuButton({ shouldShow, q: currentQ });
+  };
+
   const runLookup = async (ident: ChannelIdentifier): Promise<void> => {
     const q = pickLookupQ(ident);
     if (!q) return;
     if (lastLookupKey === q) return;
     lastLookupKey = q;
 
+    // 新しい q に切り替わった瞬間は古い lookup を捨てる。
+    // ここで非表示に倒しておくと、新 lookup が遅延しても古い結果でボタンが残らない。
+    currentQ = q;
+    currentLookup = null;
+    evaluateAndApply();
+
+    const generation = scanGeneration;
     const result = await fujuData('youtube', q);
+    // lookup 解決中に SPA 遷移が走っていたら結果を破棄する。
+    if (generation !== scanGeneration) return;
+    if (lastLookupKey !== q) return;
+
     const exists = result === null ? null : result.exists;
     console.log('[fuju/youtube] lookup', { provider: 'youtube', q, exists });
+
+    currentLookup = result;
+    evaluateAndApply();
   };
 
   const scan = (): void => {
@@ -59,8 +87,11 @@ const youtube = () => {
   };
 
   const onNavigate = (): void => {
-    // 遷移したら直前の lookup キーをリセットする。
+    // 遷移したら直前の lookup キーをリセットし、ボタンも一旦消す。
     lastLookupKey = null;
+    currentQ = null;
+    currentLookup = null;
+    removeAllFujuButtons();
     scan();
   };
 
@@ -76,6 +107,9 @@ const youtube = () => {
         if (ident && (ident.handle || ident.channelId)) {
           void runLookup(ident);
         }
+        // subscribe host が遅れて hydration するケース、collab で host が
+        // 後追いで増えるケースに備え、最新条件でボタン挿入を再評価する。
+        evaluateAndApply();
       });
     });
     observer.observe(document.body, { childList: true, subtree: true });
@@ -83,12 +117,23 @@ const youtube = () => {
   };
 
   const start = (): (() => void) => {
+    void getAuthState().then((state) => {
+      currentAuth = state.isAuthenticated;
+      evaluateAndApply();
+    });
+    const unsubscribeAuth = onAuthStateChange((state) => {
+      currentAuth = state.isAuthenticated;
+      evaluateAndApply();
+    });
+
     scan();
-    const unsubscribe = onChannelContextChange(onNavigate);
+    const unsubscribeNav = onChannelContextChange(onNavigate);
     const observer = startObserver();
     return () => {
-      unsubscribe();
+      unsubscribeAuth();
+      unsubscribeNav();
       observer.disconnect();
+      removeAllFujuButtons();
     };
   };
 
