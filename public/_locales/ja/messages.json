@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "Fuju 拡張機能",
+    "description": "Chrome 拡張のストア表示名 (manifest.name)。"
+  },
+  "extDescription": {
+    "message": "X (Twitter) のタイムライン上で Fuju ユーザーを識別し、AuthCore でログインするブラウザ拡張機能です。",
+    "description": "Chrome 拡張のストア説明文 (manifest.description)。"
+  },
+  "actionDefaultTitle": {
+    "message": "Fuju 拡張機能を開く",
+    "description": "ツールバーアイコンのツールチップ (manifest.action.default_title)。"
+  }
+}

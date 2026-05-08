@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "Fuju Extension",
+    "description": "Display name of the extension on the Chrome Web Store (manifest.name)."
+  },
+  "extDescription": {
+    "message": "Browser extension that highlights Fuju users on X (Twitter) timelines and signs in via AuthCore.",
+    "description": "Store description (manifest.description)."
+  },
+  "actionDefaultTitle": {
+    "message": "Open Fuju Extension",
+    "description": "Tooltip for the toolbar action button (manifest.action.default_title)."
+  }
+}
